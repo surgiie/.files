@@ -5,7 +5,8 @@ sudo add-apt-repository universe -y
 sudo apt upgrade -y
 mkdir -p ~/.local/bin
 
-if [ ! $(which zsh) ]; then
+if ! command -v zsh 2>&1 >/dev/null
+then
     sudo apt-get install zsh -y
 fi
 
@@ -13,7 +14,8 @@ if [ ! -d ~/.oh-my-zsh ]; then
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 fi
 
-if [ ! $(which docker) ]; then
+if ! command -v docker 2>&1 >/dev/null
+then
     sudo apt-get remove docker docker-engine docker.io containerd runc
 
     sudo mkdir -p /etc/apt/keyrings
@@ -31,36 +33,45 @@ if [ ! $(which docker) ]; then
     sudo chmod 666 /var/run/docker.sock
 fi
 
-if [ ! $(which xclip) ]; then
+if ! command -v xclip 2>&1 >/dev/null
+then
     sudo apt install -y xclip
 fi
-if [ ! $(which wmctrl) ]; then
+
+if ! command -v wmctrl 2>&1 >/dev/null
+then
     sudo apt install -y wmctrl
 fi
-if [ ! $(which xdotool) ]; then
+if ! command -v xdotool 2>&1 >/dev/null
+then
     sudo apt install -y xdotool
 fi
-if [ ! $(which ffmpeg) ]; then
+
+if ! command -v ffplay 2>&1 >/dev/null
+then
     sudo apt install -y ffmpeg
 fi
-
-if [ ! $(which tmux) ]; then
+if ! command -v tmux 2>&1 >/dev/null
+then
     sudo apt install -y tmux
 fi
 
-if [ ! $(which wezterm) ]; then
+if ! command -v wezterm 2>&1 >/dev/null
+then
     curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /etc/apt/keyrings/wezterm-fury.gpg
     echo 'deb [signed-by=/etc/apt/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
     sudo apt update
     sudo apt install -y wezterm
 fi
 
-if [ ! $(which google-chrome) ]; then
+if ! command -v google-chrome 2>&1 >/dev/null
+then
     wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
     sudo apt install ./google-chrome-stable_current_amd64.deb -y
 fi
 
-if [ ! $(which bat) ]; then
+if ! command -v bat 2>&1 >/dev/null
+then
     sudo apt install -y bat
     mkdir -p ~/.local/bin
     ln -s /usr/bin/batcat ~/.local/bin/bat
@@ -74,9 +85,14 @@ if [ ! -f ~/.fonts/GohuFontuni14NerdFont-Regular.ttf ]; then
     cd /tmp
 fi
 
-if [ ! $(which nvim) ]; then
-    wget https://github.com/neovim/neovim/releases/download/stable/nvim.appimage && sudo chmod u+x nvim.appimage && sudo mv ./nvim.appimage /usr/bin/nvim
-    sudo chmod +x /usr/bin/nvim
+if ! command -v nvim 2>&1 >/dev/null
+then
+    cd /tmp
+    wget https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz
+    tar xzvf nvim-linux-x86_64.tar.gz
+    sudo mv nvim-linux-x86_64 /usr/local/bin/nvim
+    cd -
+    sudo chmod u+x /usr/local/bin/nvim/bin/nvim
     sudo apt install libfuse2 -y
 fi
 

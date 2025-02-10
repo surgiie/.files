@@ -10,6 +10,7 @@ export PYTHON=$(which python3)
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 export PATH="$PATH:/usr/local/bin"
+export PATH="$PATH:/usr/local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
 export PATH="$PATH:$PYENV_ROOT/versions/$(pyenv version | awk '{print $1}')/bin"
 export PATH="$PATH:/home/$USER/.local/bin"
