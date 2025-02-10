@@ -48,7 +48,7 @@ if isWindows then
   backgroundSource = "\\\\wsl.localhost\\Ubuntu\\home\\" .. user .."\\.files\\wallpapers\\terminal.jpg"
   config.default_domain = 'WSL:Ubuntu'
 else
-  backgroundSource = "/home/".. user .. "/.files/wallpapers/space.jpg"
+  backgroundSource = "/home/".. user .. "/.files/wallpapers/terminal.jpg"
 end
 
 -- Scroll bar options
