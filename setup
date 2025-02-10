@@ -1,0 +1,87 @@
+#!/bin/bash
+sudo apt update
+sudo add-apt-repository universe -y
+
+sudo apt upgrade -y
+mkdir -p ~/.local/bin
+
+if [ ! $(which zsh) ]; then
+    sudo apt-get install zsh -y
+fi
+
+if [ ! -d ~/.oh-my-zsh ]; then
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+
+if [ ! $(which docker) ]; then
+    sudo apt-get remove docker docker-engine docker.io containerd runc
+
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    sudo apt-get update
+
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+    sudo usermod -aG docker $USER
+    sudo chmod 666 /var/run/docker.sock
+fi
+
+if [ ! $(which xclip) ]; then
+    sudo apt install -y xclip
+fi
+if [ ! $(which wmctrl) ]; then
+    sudo apt install -y wmctrl
+fi
+if [ ! $(which xdotool) ]; then
+    sudo apt install -y xdotool
+fi
+if [ ! $(which ffmpeg) ]; then
+    sudo apt install -y ffmpeg
+fi
+
+if [ ! $(which tmux) ]; then
+    sudo apt install -y tmux
+fi
+
+if [ ! $(which wezterm) ]; then
+    curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /etc/apt/keyrings/wezterm-fury.gpg
+    echo 'deb [signed-by=/etc/apt/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
+    sudo apt update
+    sudo apt install -y wezterm
+fi
+
+if [ ! $(which google-chrome) ]; then
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    sudo apt install ./google-chrome-stable_current_amd64.deb -y
+fi
+
+if [ ! $(which bat) ]; then
+    sudo apt install -y bat
+    mkdir -p ~/.local/bin
+    ln -s /usr/bin/batcat ~/.local/bin/bat
+fi
+
+if [ ! -f ~/.fonts/GohuFontuni14NerdFont-Regular.ttf ]; then
+    mkdir fonts
+    cd fonts
+    wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/Gohu.zip
+    unzip "*.zip" "*.ttf" -d ${HOME}/.fonts
+    cd /tmp
+fi
+
+if [ ! $(which nvim) ]; then
+    wget https://github.com/neovim/neovim/releases/download/stable/nvim.appimage && sudo chmod u+x nvim.appimage && sudo mv ./nvim.appimage /usr/bin/nvim
+    sudo chmod +x /usr/bin/nvim
+    sudo apt install libfuse2 -y
+fi
+
+if [ ! -d ~/.tmux/plugins/tpm ]; then
+    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+fi
+
+

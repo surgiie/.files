@@ -1,0 +1,21 @@
+{
+  "$schema": "wtq.schema.2.json",
+  "Apps": [
+    {
+      "Name": "WezTerm",
+      "HotKeys": [{ "Modifiers": "Alt", "Key": "t" }],
+      "FileName": "wezterm-gui",
+      "VerticalScreenCoverage": 101,
+      "HorizontalScreenCoverage": 100,
+      "HideOnFocusLost": false
+    },
+    {
+      "Name": "Chrome",
+      "HotKeys": [{ "Modifiers": "Alt", "Key": "c" }],
+      "FileName": "chrome.exe",
+      "VerticalScreenCoverage": 101,
+      "HorizontalScreenCoverage": 100,
+      "HideOnFocusLost": false
+    },
+  ],
+}

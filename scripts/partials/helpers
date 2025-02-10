@@ -1,0 +1,118 @@
+#!/bin/bash
+
+open() {
+    xdg-open $* >/dev/null 2>&1
+}
+
+symlink() {
+    local force=false
+    local source destination
+
+    # Check if the first argument is "-f" (force flag)
+    if [ "$1" == "-f" ]; then
+        force=true
+        shift  # Remove the flag from arguments
+    fi
+
+    source="$1"
+    destination="$2"
+
+    # Ensure both arguments are provided
+    if [ -z "$source" ] || [ -z "$destination" ]; then
+        echo "Usage: symlink [-f] <source> <destination>"
+        return 1
+    fi
+
+    # If force flag is used, remove existing destination
+    if [ "$force" == true ]; then
+        [ -e "$destination" ] || [ -L "$destination" ] && rm -rf "$destination"
+    else
+        # Check if the destination already exists
+        if [ -e "$destination" ] || [ -L "$destination" ]; then
+            echo "Error: '$destination' already exists. Use '-f' to overwrite."
+            return 1
+        fi
+    fi
+
+    # Create the symbolic link
+    ln -s "$source" "$destination" && echo "Symlink created: $destination → $source"
+}
+
+save_dot_files(){
+    cd ~/.files
+    git add .
+    git commit -m "Save dotfiles."
+    git push
+    cd -
+}
+
+shutdown() {
+    cd ~/.files
+
+    if [[ $(git diff --stat) != '' ]]; then
+        save_dot_files
+    fi
+
+    rm ~/.env
+    rm ~/.ssh/ssh_auth_sock
+
+    if [ -n "$SSH_AUTH_SOCK" ] ; then
+        eval `ssh-agent -k`
+    fi
+    cd -
+    ffplay -nodisp -autoexit ~/.files/sounds/chrono-trigger/goodnight.mp3
+    sudo shutdown -h now
+}
+
+# from project root: `composer-link /path/to/local/package`
+composer-link() {
+    local package_path=$1
+    local package_name=$(jq -r '.name' "$package_path/composer.json")
+    composer config repositories.local-$(basename "$package_path") '{"type": "path", "url": "'$package_path'"}'
+    composer require $package_name:dev-master
+}
+
+untar() {
+    tar xvf $@
+}
+
+# from project root: `npm-link /path/to/local/package`
+npm-link() {
+    package_path="$1"
+    package_name=$(node -p "require('$package_path/package.json').name")
+
+    if [ -z "$package_name" ]; then
+        echo "Invalid package directory."
+        return 1
+    fi
+    echo "Linking $package_name at $package_path"
+    cd "$package_path"
+    npm link
+
+    cd -
+    npm link "$package_name"
+}
+
+# from project root: `npm-unlink /path/to/local/package`
+npm-unlink() {
+    # Check if the package is in dependencies or devDependencies
+    DEP=$(cat package.json | grep -q "\"$1\"" && echo "true" || echo "false")
+    DEV_DEP=$(cat package.json | grep -q "\"$1\"" && echo "true" || echo "false")
+
+    # Get the version of the package before unlinking
+    VERSION=$(npm list $1 | grep $1 | cut -d'@' -f2 | head -n 1)
+
+    # Unlink the package
+    npm unlink $1
+
+    # Add the package back to package.json with its original version
+    if [ "$DEP" = "true" ]; then
+        npm install $1@$VERSION --save
+    elif [ "$DEV_DEP" = "true" ]; then
+        npm install $1@$VERSION --save-dev
+    else
+        echo "The package $1 was not found in dependencies or devDependencies."
+    fi
+}
+
+

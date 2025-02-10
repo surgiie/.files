@@ -1,0 +1,36 @@
+#!/bin/bash
+# tools i use and need to upgrade frequently/easily
+upgrade() (
+
+  neovim() {
+    echo "Updating neovim..."
+    wget https://github.com/neovim/neovim/releases/download/stable/nvim.appimage && sudo chmod u+x nvim.appimage && sudo mv ./nvim.appimage /usr/bin/nvim
+    sudo chmod +x /usr/bin/nvim
+    # ensure nvim config is owned by user
+    sudo chown $USER: -R ~/.config/
+  }
+
+  kubectl() {
+    echo "Updating kubectl..."
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+  }
+
+  tilt() {
+    echo "Updating tilt..."
+    latest=$(curl -s https://api.github.com/repos/tilt-dev/tilt/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/^v//')
+    wget "https://github.com/tilt-dev/tilt/releases/download/v$latest/tilt.$latest.linux.x86_64.tar.gz" -O /tmp/tilt.$latest.linux.x86_64.tar.gz
+    tar xvf /tmp/tilt.$latest.linux.x86_64.tar.gz -C /tmp
+    sudo cp /tmp/tilt /usr/local/bin/tilt
+  }
+
+  if [ $# -eq 0 ]; then
+    sudo apt update
+    sudo apt upgrade -y
+    sudo apt autoremove -y
+    sudo apt autoclean
+
+    exit 0
+  fi
+  $@
+)

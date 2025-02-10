@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+source /home/$USER/.files/scripts/partials/helpers
+
+# Symlink files to the home directory and copy any static files to appropriate locations.
+if [ "$(id -u)" -eq 0 ]; then
+    echo "ERROR: This script should not run as root."
+    exit 1
+fi
+
+DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mkdir -p /home/$USER/.config
+
+# Symlink files to home directory.
+for file in $(find $DOTFILES/symlinks -type f); do
+    base_name=${file##*/.files/symlinks/}
+    dir_name=$(dirname $base_name)
+    mkdir -p $HOME/$dir_name
+    symlink -f $file $HOME/$base_name
+done
+
+# Copy files to appropriate locations for windows
+if grep -i "microsoft" /proc/version >/dev/null; then
+    cp ~/.files/symlinks/.wezterm.lua /mnt/c/Users/$USER/.config/wezterm/wezterm.lua
+    cp ~/.files/windows/wtq.jsonc /mnt/c/Users/$USER/wtq.jsonc
+    cp ~/.files/windows/startup.bat /mnt/c/Users/$USER/AppData/Roaming/Microsoft/Windows/Start\ Menu/Programs/Startup/startup.bat
+    echo "Copied windows specific files."
+fi
+

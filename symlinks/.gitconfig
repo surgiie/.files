@@ -1,0 +1,74 @@
+[user]
+name = Sergio Compean
+email = scompean24@gmail.com
+[push]
+default = current
+autoSetupRemote = true
+[core]
+autocrlf = input
+editor = vim
+excludesfile = ~/.gitignore_global
+[alias]
+a = add
+aa = add --all
+ap = add --patch
+au = add --update
+s = status
+pluck = cherry-pick
+unstage = reset HEAD -- "$@"
+ls = log --pretty=format:"[%C(blue)%ad%Creset]\\[%cn]\\[%C(yellow)%h%Creset]\\ %Cgreen%s%Creset" --decorate --date=short
+graph = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %s- %an%C(reset)'
+visit = "!f(){ xdg-open `git config --get remote.origin.url | sed -Ee 's#(git@|git://)#https://#' -e 's@com:@com/@'`| head -n1; }; f"
+b = branch
+ba = branch --all
+bd = branch --delete
+bD = branch --delete --force
+bm = branch --move
+bM = branch --move --force
+
+c = commit
+ca = commit --amend
+ci = commit --interactive
+cm = commit --message
+cv = commit --verbose
+
+d = diff
+dc = diff --cached
+ds = diff --staged
+dw = diff --word-diff
+
+l = log
+lg = log --graph
+lk = log --graph --topo-order --abbrev-commit --date=short --decorate --all --boundary --pretty=format:'%Cgreen%ad %Cred%h%Creset -%C(yellow)%d%Creset %s %Cblue[%cn]%Creset'
+lo = log --oneline
+lp = log --patch
+lt = log --topo-order
+
+new = "!git switch -c $1 && git push && git branch --set-upstream-to=origin/$1"
+
+s = status --short --branch
+
+branch-list-merged = "!git branch --merged quality-control | grep -v -E '(quality-control|dev|main|origin|master|production)'"
+branch-delete-merged = "!git branch-list-merged | xargs git branch -d"
+
+unstage = reset HEAD
+undo-commit = reset --soft HEAD^
+set-upstream = !git branch --set-upstream-to=origin/$(git symbolic-ref --short HEAD)
+
+[color]
+ui = auto
+[fetch]
+prune = true
+[help]
+autocorrect = 10
+[include]
+path = ~/.gitconfig_local
+[push]
+default = current
+autoSetupRemote = true
+[merge]
+	conflictstyle = diff3
+[pull]
+rebase = false
+[init]
+defaultBranch = main

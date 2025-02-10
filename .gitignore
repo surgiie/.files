@@ -1,0 +1,4 @@
+.rendered
+nvim/lazy-lock.json
+# tmp
+kickstart.nvim
