@@ -174,7 +174,23 @@ return {
 					},
 				},
 			},
-
+            ruff = {},
+			pylsp = {
+				settings = {
+					pylsp = {
+						plugins = {
+							pyflakes = { enabled = false },
+							pycodestyle = { enabled = false },
+							autopep8 = { enabled = false },
+							yapf = { enabled = false },
+							mccabe = { enabled = false },
+							pylsp_mypy = { enabled = false },
+							pylsp_black = { enabled = true },
+							pylsp_isort = { enabled = true },
+						},
+					},
+				},
+			},
 			lua_ls = {
 				-- cmd = {...},
 				-- filetypes = { ...},
@@ -201,26 +217,6 @@ return {
 			},
 		}
 
-		if not _G.IS_WSL then
-			servers["ruff"] = {}
-			servers["pylsp"] = {
-				settings = {
-					pylsp = {
-						plugins = {
-							pyflakes = { enabled = false },
-							pycodestyle = { enabled = false },
-							autopep8 = { enabled = false },
-							yapf = { enabled = false },
-							mccabe = { enabled = false },
-							pylsp_mypy = { enabled = false },
-							pylsp_black = { enabled = true },
-							pylsp_isort = { enabled = true },
-						},
-					},
-				},
-			}
-		end
-
 		-- Ensure the servers and tools above are installed
 		--  To check the current status of installed tools and/or manually install
 		--  other tools, you can run
@@ -236,7 +232,7 @@ return {
 			"stylua", -- Used to format Lua code
 			"prettier",
 		})
-		require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
+		require("mason-tool-installer").setup({ run_on_start = false, ensure_installed = ensure_installed })
 
 		local border = {
 			{ "🭽", "FloatBorder" },
