@@ -4,6 +4,7 @@ vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>", { silent = true, desc = "Disabl
 -- Leader key mappings
 vim.keymap.set("n", "<leader>`", "<cmd> Neoformat <CR>", { noremap = true, silent = true, desc = "Format File" })
 vim.keymap.set("n", "<Leader>s", "^", { noremap = true, silent = true, desc = "Move to start of line" })
+
 vim.keymap.set("n", "<leader>b", "<cmd> enew <CR>", { noremap = true, silent = true, desc = "New Buffer" })
 vim.keymap.set("n", "<leader>bn", ":bnext<CR>", { noremap = true, silent = true, desc = "Next Buffer" })
 vim.keymap.set("n", "<leader>bp", ":bprevious<CR>", { noremap = true, silent = true, desc = "Previous Buffer" })
@@ -13,7 +14,6 @@ vim.keymap.set("n", "<leader>wh", "<C-w>s", { noremap = true, silent = true, des
 vim.keymap.set("n", "<leader>we", "<C-w>=", { noremap = true, silent = true, desc = "Equalize Window Sizes" })
 vim.keymap.set("n", "<leader>wc", ":close<CR>", { noremap = true, silent = true, desc = "Close Window" })
 vim.keymap.set("n", "<leader>d", vim.diagnostic.open_float, { desc = "Open floating diagnostic message" })
-vim.keymap.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Open diagnostics list" })
 vim.keymap.set("n", "<leader>st", "gg", { noremap = true, desc = "Scroll To Top Of File" })
 vim.keymap.set(
 	"n",
@@ -22,7 +22,6 @@ vim.keymap.set(
 	{ noremap = true, silent = true, desc = "Scroll To Bottom Of File" }
 )
 vim.keymap.set("n", "<Leader>e", "$", { noremap = true, silent = true, desc = "Move to end of line" })
-
 -- Ctrl + <key> mappings
 vim.keymap.set("n", "<C-q>", "<cmd> q <CR>", { noremap = true, silent = true, desc = "Quit File" })
 vim.keymap.set("n", "<C-s>", ":w<CR>", { desc = "Save File", silent = true })
@@ -35,13 +34,16 @@ vim.keymap.set("i", "<C-z>", "<C-O>u<C-O>$", { noremap = true, silent = true, de
 vim.keymap.set("n", "<C-a>", function()
 	vim.cmd("normal! ggVG")
 end, { noremap = true, silent = true, desc = "Select All Text" })
-vim.keymap.set("i", "<C-a>", function() vim.cmd("normal! ggVG") end, { noremap = true, silent = true, desc = "Select All Text" })
+vim.keymap.set("i", "<C-a>", function()
+	vim.cmd("normal! ggVG")
+end, { noremap = true, silent = true, desc = "Select All Text" })
 
 vim.keymap.set("i", "<C-y>", function()
 	local pos = vim.fn.getpos(".")
 	vim.cmd("redo")
 	vim.fn.setpos(".", pos)
 end, { silent = true, noremap = true, desc = "Redo Last Change" })
+
 vim.keymap.set("i", "<C-x>", "<Del>", { noremap = true, silent = true, desc = "Delete Character" })
 vim.keymap.set("v", "<C-x>", '"+c', { noremap = true, silent = true, desc = "Cut Selected Text" })
 vim.keymap.set("v", "<C-c>", '"+yi', { noremap = true, desc = "Copy Selected Text" })

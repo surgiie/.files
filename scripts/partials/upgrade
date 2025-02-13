@@ -1,14 +1,13 @@
 #!/bin/bash
-# tools i use and need to upgrade frequently/easily
+# tools i use and need to upgrade frequently/easily$HOME
 upgrade() (
-
   neovim() {
     echo "Updating neovim..."
     version=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest | jq -r '.tag_name')
 
     wget https://github.com/neovim/neovim/releases/download/$version/nvim-linux-x86_64.appimage
     sudo chmod u+x nvim-linux-x86_64.appimage
-    sudo mv nvim-linux-x86_64.appimage /usr/bin/nvim
+    sudo mv nvim-linux-x86_64.appimage $HOME/.local/bin/nvim
 
   }
 
