@@ -39,6 +39,11 @@ then
     cd - &>/dev/null
 fi
 
+if [ ! -d ~/.nvim-devcontainer ]
+then
+    git clone git@github.com:/surgiie/.nvim-devcontainer.git ~/.nvim-devcontainer
+fi
+
 # fixes docker desktop exec format error in wsl
 if grep -i "microsoft" /proc/version >/dev/null; then
     if [ -f ~/.docker/config.json ]
