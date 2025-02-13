@@ -4,10 +4,12 @@ upgrade() (
 
   neovim() {
     echo "Updating neovim..."
-    wget https://github.com/neovim/neovim/releases/download/stable/nvim.appimage && sudo chmod u+x nvim.appimage && sudo mv ./nvim.appimage /usr/bin/nvim
-    sudo chmod +x /usr/bin/nvim
-    # ensure nvim config is owned by user
-    sudo chown $USER: -R ~/.config/
+    version=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest | jq -r '.tag_name')
+
+    wget https://github.com/neovim/neovim/releases/download/$version/nvim-linux-x86_64.appimage
+    sudo chmod u+x nvim-linux-x86_64.appimage
+    sudo mv nvim-linux-x86_64.appimage /usr/bin/nvim
+
   }
 
   kubectl() {
