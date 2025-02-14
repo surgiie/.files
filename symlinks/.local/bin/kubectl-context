@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ -z $1 ];
+then
+  context=$(kubectl config current-context)
+  echo "Context: $context"
+  echo "Namespace: $(kubectl config view --minify -o jsonpath='{..namespace}')"
+  exit
+fi
+
+
+knamespace=${2:-default}
+kubectl config use-context $1 --namespace=$namespace
+echo "Using Namespace: $namespace"

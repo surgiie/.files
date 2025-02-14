@@ -68,6 +68,7 @@ alias paste="xclip -o -selection clipboard"
 alias sudo='sudo -E env "PATH=$PATH"'
 cat(){
     if [[ " $* " == *" --pretty "* ]]; then
+        shift
         command batcat $@
     else
         command cat $@

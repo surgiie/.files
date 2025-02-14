@@ -47,6 +47,7 @@ save_dot_files(){
 }
 
 shutdown() {
+    sudo >/dev/null
     cd ~/.files
 
     if [[ $(git diff --stat) != '' ]]; then
@@ -60,7 +61,7 @@ shutdown() {
         eval `ssh-agent -k`
     fi
     cd -
-    ffplay -nodisp -autoexit ~/.files/sounds/chrono-trigger/goodnight.mp3
+    ffplay -nodisp -autoexit ~/.files/sounds/chrono-trigger/goodnight.mp3 & disown
     sudo shutdown -h now
 }
 
