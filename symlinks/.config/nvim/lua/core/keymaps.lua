@@ -77,6 +77,8 @@ vim.keymap.set(
 	"5l",
 	{ desc = "Move Cursor Right by 5 Characters", noremap = true, silent = true }
 )
+vim.keymap.set('n', '<S-x>', 'd$', { noremap = true, silent = true, desc = 'Delete to end of line' })
+
 -- Single character keymappings
 vim.keymap.set("n", "x", '"_x', { noremap = true, silent = true, desc = "Delete Single Character" })
 vim.keymap.set("n", "d", '"_d', { noremap = true, desc = "Delete Line Without Register/Copy" })
