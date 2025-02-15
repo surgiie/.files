@@ -8,16 +8,10 @@ vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>", { silent = true, desc = "Disabl
 vim.keymap.set("n", "<leader>`", "<cmd> Neoformat <CR>", { noremap = true, silent = true, desc = "Format File" })
 vim.keymap.set("n", "<Leader>s", "^", { noremap = true, silent = true, desc = "Move to start of line" })
 
-vim.keymap.set("n", "<leader>b", "<cmd> enew <CR>", { noremap = true, silent = true, desc = "New Buffer" })
-vim.keymap.set("n", "<leader>bn", ":bnext<CR>", { noremap = true, silent = true, desc = "Next Buffer" })
-vim.keymap.set("n", "<leader>bl", function()
-	local tsbuiltin = require("telescope.builtin")
-	tsbuiltin.buffers({
-		ignore_current_buffer = true,
-		sort_mru = true,
-	})
-end, { noremap = true, silent = true, desc = "List Buffers" })
-vim.keymap.set("n", "<leader>bp", ":bprevious<CR>", { noremap = true, silent = true, desc = "Previous Buffer" })
+vim.keymap.set("n", "<leader>bn", "<cmd> enew <CR>", { noremap = true, silent = true, desc = "New Buffer" })
+vim.keymap.set("n", "<leader>l", ":bnext<CR>", { noremap = true, silent = true, desc = "Next Buffer" })
+vim.keymap.set("n", "<leader>b", "<cmd>BufferLinePick<CR>" , { noremap = true, silent = true, desc = "List Buffers For Pick" })
+vim.keymap.set("n", "<leader>h", ":bprevious<CR>", { noremap = true, silent = true, desc = "Previous Buffer" })
 vim.keymap.set("n", "<leader>bd", ":bdelete!<CR>", { noremap = true, silent = true, desc = "Delete Buffer" })
 vim.keymap.set("n", "<leader>wv", "<C-w>v", { noremap = true, silent = true, desc = "Split Window Vertically" })
 vim.keymap.set("n", "<leader>wh", "<C-w>s", { noremap = true, silent = true, desc = "Split Window Horizontally" })
