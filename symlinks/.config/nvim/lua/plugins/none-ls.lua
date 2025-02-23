@@ -8,20 +8,7 @@ return {
       local null_ls = require 'null-ls'
       local formatting = null_ls.builtins.formatting -- to setup formatters
       local diagnostics = null_ls.builtins.diagnostics -- to setup linters
-      local ensure_installed =  {
-          'prettier', -- ts/js formatter
-          'stylua', -- lua formatter
-          'eslint_d', -- ts/js linter
-          'shfmt', -- Shell formatter
-          'checkmake', -- linter for Makefiles
-      }
-      -- only install these on non-WSL
-      if not _G.IS_WSL then
-        table.insert(ensure_installed, 'ruff')
-      end
-      -- Formatters & linters for mason to install
       require('mason-null-ls').setup {
-        ensure_installed = ensure_installed,
         automatic_installation = false,
       }
 
