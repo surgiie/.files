@@ -22,7 +22,7 @@ return {
       -- Formatters & linters for mason to install
       require('mason-null-ls').setup {
         ensure_installed = ensure_installed,
-        automatic_installation = true,
+        automatic_installation = false,
       }
 
       local sources = {
