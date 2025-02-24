@@ -44,14 +44,9 @@ then
     git clone git@github.com:/surgiie/.nvim-devcontainer.git ~/.nvim-devcontainer
 fi
 
-if [ ! command -v kantui &> /dev/null ]
+if ! -z "$(which kantui)" &>/dev/null
 then
     desired_version=0.1.0 && wget -qO $HOME/.local/bin/kantui https://raw.githubusercontent.com/surgiie/kantui/refs/tags/v$desired_version/docker && chmod +x $HOME/.local/bin/kantui
-fi
-
-if [ ! command -v vault &> /dev/null ]
-then
-    desired_version=0.1.0 && wget -qO $HOME/.local/bin/vault https://raw.githubusercontent.com/surgiie/vault-cli/refs/tags/v$desired_version/docker && chmod +x $HOME/.local/bin/vault
 fi
 
 # fixes docker desktop exec format error in wsl
