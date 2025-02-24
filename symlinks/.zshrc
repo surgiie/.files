@@ -50,6 +50,7 @@ then
 fi
 
 if [ ! command -v vault &> /dev/null ]
+then
     desired_version=0.1.0 && wget -qO $HOME/.local/bin/vault https://raw.githubusercontent.com/surgiie/vault-cli/refs/tags/v$desired_version/docker && chmod +x $HOME/.local/bin/vault
 fi
 
@@ -158,7 +159,7 @@ then
 fi
 
 # file to source only on certain machines
-if [ -f $HOME/pc ]
+if [ -f $HOME/pc ];
 then
     source $HOME/pc
 fi
