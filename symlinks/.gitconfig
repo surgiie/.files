@@ -58,17 +58,28 @@ set-upstream = !git branch --set-upstream-to=origin/$(git symbolic-ref --short H
 [color]
 ui = auto
 [fetch]
-prune = true
+	prune = true
+	pruneTags = true
+	all = true
 [help]
-autocorrect = 10
+	autocorrect = prompt
 [include]
 path = ~/.gitconfig_local
 [push]
 default = current
 autoSetupRemote = true
+followTags = true
 [merge]
-	conflictstyle = diff3
+	conflictstyle = zdiff3
 [pull]
-rebase = false
+	rebase = true
 [init]
 defaultBranch = main
+[diff]
+	algorithm = histogram
+[commit]
+	verbose = true
+[rebase]
+	autoSquash = true
+	autoStash = true
+	updateRefs = true
