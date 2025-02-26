@@ -30,8 +30,8 @@ vim.opt.rtp:prepend(lazypath);
 -- Install custom plugins using lazy plugin manager.
 (require("lazy")).setup({
 	require("plugins.floatterm"),
-	require("plugins.theme"),
 	require("plugins.neotree"),
+	require("plugins.theme"),
 	require("plugins.bufferline"),
 	require("plugins.lualine"),
 	require("plugins.treesitter"),
