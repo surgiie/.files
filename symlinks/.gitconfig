@@ -69,8 +69,6 @@ path = ~/.gitconfig_local
 default = current
 autoSetupRemote = true
 followTags = true
-[merge]
-	conflictstyle = zdiff3
 [pull]
 	rebase = true
 [init]
