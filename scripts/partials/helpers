@@ -68,7 +68,10 @@ shutdown() {
 # from project root: `composer-link /path/to/local/package`
 
 composer-link() {
+    name=$(jq -r '.name' $1/composer.json)
     composer config repositories.local '{"type": "path", "url": "'$1'"}' --file composer.json
+    composer require $name @dev
+
 }
 
 untar() {
