@@ -65,12 +65,12 @@ ui = auto
 	autocorrect = prompt
 [include]
 path = ~/.gitconfig_local
+[pull]
+	rebase = false
 [push]
 default = current
 autoSetupRemote = true
 followTags = true
-[pull]
-	rebase = true
 [init]
 defaultBranch = main
 [diff]
