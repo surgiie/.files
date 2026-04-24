@@ -53,7 +53,7 @@
     emmet-language-server
     # Python LSP servers
     python313Packages.python-lsp-server
-    python-pywayland
+    python313Packages.pywayland
     python-pycairo
     python-opencv
     python-numpy
