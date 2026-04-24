@@ -53,6 +53,12 @@
     emmet-language-server
     # Python LSP servers
     python313Packages.python-lsp-server
+    python-pywayland
+    python-pycairo
+    python-opencv
+    python-numpy
+    libxkbcommon
+
     ruff
     # Lua LSP server
     stylua
