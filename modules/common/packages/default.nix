@@ -8,6 +8,7 @@
     dig
     claude-code
     openssl
+    ydotool
     tree-sitter
     fd
     zsh-forgit
