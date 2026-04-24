@@ -1,0 +1,45 @@
+/* -------------------------------------------------------------------------
+ * Accent Colors
+ * ------------------------------------------------------------------------- */
+@define-color rosewater #f8f8f2;
+@define-color flamingo #fd971f;
+@define-color pink #f92672;
+@define-color mauve #ae81ff;
+@define-color red #f92672;
+@define-color maroon #f92672;
+@define-color peach #fd971f;
+@define-color yellow #e6db74;
+@define-color green #a6e22e;
+@define-color teal #66d9ef;
+@define-color sky #66d9ef;
+@define-color sapphire #66d9ef;
+@define-color blue #66d9ef;
+@define-color lavender #ae81ff;
+
+/* -------------------------------------------------------------------------
+ * Text Colors
+ * ------------------------------------------------------------------------- */
+@define-color text #f8f8f2;
+@define-color subtext1 #f8f8f2;
+@define-color subtext0 #cfcfc2;
+
+/* -------------------------------------------------------------------------
+ * Overlay Colors
+ * ------------------------------------------------------------------------- */
+@define-color overlay2 #75715e;
+@define-color overlay1 #75715e;
+@define-color overlay0 #75715e;
+
+/* -------------------------------------------------------------------------
+ * Surface Colors
+ * ------------------------------------------------------------------------- */
+@define-color surface2 #49483e;
+@define-color surface1 #3e3d32;
+@define-color surface0 #34342a;
+
+/* -------------------------------------------------------------------------
+ * Base Colors
+ * ------------------------------------------------------------------------- */
+@define-color base #272822;
+@define-color mantle #1e1f1c;
+@define-color crust #141410;

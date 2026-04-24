@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+## ---------------------------------------------------------------------------------------
+## nixos-sync - rebuils my nixos configuration and optionally cleans up old generations
+## ---------------------------------------------------------------------------------------
+
+if [ ! -f "$HOME/nixos-host" ]; then
+    echo "❌ ERROR: Please write your nixos host name to $HOME/nixos-host" >&2
+    exit 1
+fi
+host="$(cat "$HOME/nixos-host")"
+dotfiles_dir="$HOME/.files"
+
+if [[ -d "$dotfiles_dir/.git" ]] && ! git -C "$dotfiles_dir" diff --quiet 2>/dev/null || ! git -C "$dotfiles_dir" diff --cached --quiet 2>/dev/null; then
+    git -C "$dotfiles_dir" add -A && git -C "$dotfiles_dir" commit -m "chore: sync for new nixos generation."
+fi
+
+# Some versions of nixos-rebuild don't support --sudo, but we want to use sudo if it's available. So we check for it and set the argument accordingly.
+sudo_arg="--use-remote-sudo"
+if nixos-rebuild --help 2>/dev/null | grep -q -- '--sudo'; then
+    sudo_arg="--sudo"
+fi
+
+# check if host is gitignored in $HOME/.files/.gitignore,
+# if it is, then this host is not using git based flake builds
+if grep -q "^hosts/$host$" "$dotfiles_dir/.gitignore" 2>/dev/null; then
+    nixos-rebuild switch --flake path:"$HOME/.files#$host" "$sudo_arg" "$@"
+    exit 0
+fi
+
+if ! nixos-rebuild switch --flake "$HOME/.files#$host" "$sudo_arg" "$@"; then
+    echo "NixOS rebuild failed."
+    exit 1
+fi
+
+read -r -p "Rebuild successful. Do you want to clean up old generations? [y/N] " ans
+if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
+    sudo nix-collect-garbage -d
+fi

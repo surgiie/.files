@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# hyprselect - window switcher for Hyprland. Marks special workspaces
+# with a star icon in the fuzzel picker.
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Variables
+# -------------------------------------------------------------------------
+entries=()
+classes=()
+declare -A icon_cache
+
+# -------------------------------------------------------------------------
+# Functions
+# -------------------------------------------------------------------------
+find_icon() {
+    local class="$1"
+    local class_lower="${class,,}"
+
+    if [[ -n "${icon_cache[$class]}" ]]; then
+        echo "${icon_cache[$class]}"
+        return
+    fi
+
+    local desktop_file=""
+    local icon_name=""
+
+    for dir in /run/current-system/sw/share/applications ~/.local/share/applications; do
+        if [[ -f "$dir/$class_lower.desktop" ]]; then
+            desktop_file="$dir/$class_lower.desktop"
+            break
+        fi
+    done
+
+    if [[ -z "$desktop_file" ]]; then
+        while IFS= read -r file; do
+            if grep -qi "^StartupWMClass=$class" "$file" 2>/dev/null ||
+                grep -qi "^StartupWMClass=$class_lower" "$file" 2>/dev/null; then
+                desktop_file="$file"
+                break
+            fi
+        done < <(find /run/current-system/sw/share/applications ~/.local/share/applications -name "*.desktop" 2>/dev/null)
+    fi
+
+    if [[ -n "$desktop_file" ]]; then
+        icon_name=$(grep "^Icon=" "$desktop_file" | head -1 | cut -d= -f2)
+    fi
+
+    if [[ -z "$icon_name" ]]; then
+        icon_name="$class_lower"
+    fi
+
+    icon_cache[$class]="$icon_name"
+    echo "$icon_name"
+}
+
+# -------------------------------------------------------------------------
+# Collect windows
+# -------------------------------------------------------------------------
+while IFS=$'\t' read -r id class title ws_id ws_name; do
+    if [[ $ws_name == special* ]]; then
+        label="[⭐:$ws_name]"
+        sortkey=1
+        sort_ws=9999
+    else
+        label="[$ws_id]"
+        sortkey=0
+        sort_ws=$ws_id
+    fi
+
+    entries+=("$sortkey	$class	$sort_ws	$id	$label	$class - $title")
+done < <(
+    hyprctl clients -j |
+        jq -r '.[] |
+      [
+        .address,
+        .class,
+        .title,
+        (.workspace.id|tostring),
+        (.workspace.name // "")
+      ] | @tsv'
+)
+
+if [[ ${#entries[@]} -eq 0 ]]; then
+    exit 0
+fi
+
+# -------------------------------------------------------------------------
+# Sort and build picker entries
+# -------------------------------------------------------------------------
+mapfile -t entries < <(printf '%s\n' "${entries[@]}" | sort -t $'\t' -k1,1 -k2,2 -k3,3n)
+
+labels=()
+icons=()
+
+for e in "${entries[@]}"; do
+    tmp="${e#*$'\t'}"
+    class="${tmp%%$'\t'*}"
+    tmp="${tmp#*$'\t'}"
+    tmp="${tmp#*$'\t'}"
+    id="${tmp%%$'\t'*}"
+    tmp="${tmp#*$'\t'}"
+    label="${tmp%%$'\t'*}"
+    body="${tmp#*$'\t'}"
+
+    icon=$(find_icon "$class")
+
+    labels+=("$label $body")
+    icons+=("$icon")
+    classes+=("$class")
+done
+
+# -------------------------------------------------------------------------
+# Launch fuzzel and focus selection
+# -------------------------------------------------------------------------
+result=$(
+    for i in "${!labels[@]}"; do
+        printf '%s\0icon\x1f%s\n' "${labels[$i]}" "${icons[$i]}"
+    done | fuzzel -d --y 10 -w 40 -p "" --index
+)
+
+if [[ -n $result && $result != "-1" ]]; then
+    hyprtoggle --class "${classes[result]}"
+fi

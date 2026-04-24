@@ -1,0 +1,114 @@
+% networking
+
+; -------------------------
+; DNS
+; -------------------------
+
+# DNS: lookup A record
+dig <domain>
+
+# DNS: lookup specific record type (A, AAAA, MX, TXT, CNAME, NS, SOA)
+dig <domain> <record_type>
+
+# DNS: lookup using a specific nameserver
+dig @<nameserver> <domain>
+
+# DNS: short answer only
+dig +short <domain>
+
+# DNS: trace full resolution path
+dig +trace <domain>
+
+# DNS: reverse lookup (PTR)
+dig -x <ip>
+
+# DNS: check all records
+dig <domain> ANY +noall +answer
+
+; -------------------------
+; Ports
+; -------------------------
+
+# Port: check if a port is open on a host (nc)
+nc -zv <host> <port>
+
+# Port: check if a port is open (timeout 3s)
+nc -zv -w 3 <host> <port>
+
+# Port: scan a range of ports
+nc -zv <host> <start_port>-<end_port>
+
+# Port: list all listening ports (ss)
+ss -tlnp
+
+# Port: list all listening ports (netstat)
+netstat -tlnp
+
+# Port: find what process is using a port
+lsof -i :<port>
+
+# Port: check if local port is in use
+ss -tlnp | grep :<port>
+
+; -------------------------
+; HTTP / curl
+; -------------------------
+
+# HTTP: GET request
+curl -s <url>
+
+# HTTP: GET request with verbose output
+curl -v <url>
+
+# HTTP: GET request showing only headers
+curl -sI <url>
+
+# HTTP: POST JSON body
+curl -s -X POST <url> -H 'Content-Type: application/json' -d '<json_body>'
+
+# HTTP: follow redirects
+curl -sL <url>
+
+# HTTP: download file
+curl -O <url>
+
+# HTTP: download file to specific path
+curl -o <output_file> <url>
+
+# HTTP: set a request header
+curl -s -H '<header>' <url>
+
+# HTTP: send basic auth
+curl -s -u <user>:<password> <url>
+
+# HTTP: time a request (show connect/ttfb/total)
+curl -s -o /dev/null -w "connect: %{time_connect}s  ttfb: %{time_starttransfer}s  total: %{time_total}s\n" <url>
+
+# HTTP: check TLS/SSL certificate info
+curl -vI --stderr - <url> 2>&1 | grep -E "subject|issuer|expire|SSL"
+
+; -------------------------
+; SSL / TLS
+; -------------------------
+
+# SSL: show certificate details for a host
+openssl s_client -connect <host>:<port> </dev/null 2>/dev/null | openssl x509 -noout -text
+
+# SSL: check certificate expiry date
+openssl s_client -connect <host>:<port> </dev/null 2>/dev/null | openssl x509 -noout -dates
+
+# SSL: verify certificate chain
+openssl s_client -connect <host>:<port> -verify 5 </dev/null
+
+; -------------------------
+; Misc
+; -------------------------
+
+# Misc: get public IP
+curl -s https://ifconfig.me
+
+# Misc: test DNS resolution time
+time dig <domain> +short
+
+# Misc: check HTTP response code
+curl -s -o /dev/null -w "%{http_code}" <url>

@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# kubectl-log:monitor - monitor logs of any kubernetes resource for a
+# pattern and optionally delete the resource when matched.
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Variables
+# -------------------------------------------------------------------------
+pattern=""
+log_file=""
+resource_type="pod"
+namespace=""
+selector=""
+delete_resource=false
+interval=5
+
+# -------------------------------------------------------------------------
+# Arguments
+# -------------------------------------------------------------------------
+while [ $# -gt 0 ]; do
+    case "$1" in
+    --resource | -r)
+        resource_type="$2"
+        shift
+        ;;
+    --namespace | -n)
+        namespace="$2"
+        shift
+        ;;
+    --selector | -l)
+        selector="$2"
+        shift
+        ;;
+    --pattern | -p)
+        pattern="$2"
+        shift
+        ;;
+    --log-file)
+        log_file="$2"
+        shift
+        ;;
+    --interval | -i)
+        interval="$2"
+        shift
+        ;;
+    --delete | -d)
+        delete_resource=true
+        ;;
+    -h | --help)
+        echo "Monitor logs of any kubernetes resource for a pattern."
+        echo
+        echo "Usage:"
+        echo "    kubectl log:monitor [options]"
+        echo
+        echo "Options:"
+        echo "    -h, --help                   Display command help."
+        echo "    -r, --resource <type>        Resource type to monitor (default: pod)."
+        echo "    -n, --namespace <ns>         Namespace to query resources in."
+        echo "    -l, --selector <selector>    Label selector to filter resources."
+        echo "    -p, --pattern  <pattern>     The text or regex pattern to grep for in logs."
+        echo "    -i, --interval <seconds>     Poll interval in seconds (default: 5)."
+        echo "        --log-file <path>        Append matched resource names to this file."
+        echo "    -d, --delete                 Delete the resource when the pattern is found."
+        exit 0
+        ;;
+    *)
+        echo "Unknown argument or option: $1 (use --option value format)"
+        exit 1
+        ;;
+    esac
+    shift
+done
+
+# -------------------------------------------------------------------------
+# Validation
+# -------------------------------------------------------------------------
+if [ -z "$pattern" ]; then
+    echo "--pattern is required"
+    exit 1
+fi
+
+if [ -n "$log_file" ] && [ -f "$log_file" ]; then
+    echo "Log file already exists: $log_file"
+    echo "Please remove it before running this command."
+    exit 1
+fi
+
+# -------------------------------------------------------------------------
+# Build kubectl flags
+# -------------------------------------------------------------------------
+kubectl_flags=()
+
+if [ -n "$namespace" ]; then
+    kubectl_flags+=("-n" "$namespace")
+fi
+
+if [ -n "$selector" ]; then
+    kubectl_flags+=("-l" "$selector")
+fi
+
+# -------------------------------------------------------------------------
+# Monitor loop
+# -------------------------------------------------------------------------
+echo "(Ctrl+C to stop) Monitoring $resource_type logs for pattern: '$pattern'"
+
+if [ -n "$log_file" ]; then
+    touch "$log_file"
+fi
+
+while true; do
+    resources=$(kubectl get "$resource_type" "${kubectl_flags[@]}" --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
+
+    if [ -z "$resources" ]; then
+        echo "No ${resource_type}s found."
+        sleep "$interval"
+        continue
+    fi
+
+    echo "$resources" | while IFS= read -r resource; do
+        [ -z "$resource" ] && continue
+
+        echo "Checking: $resource"
+        logs=$(kubectl logs "$resource_type/$resource" "${kubectl_flags[@]}" 2>/dev/null)
+
+        if echo "$logs" | grep -q -E "$pattern"; then
+            echo "    -> '$pattern' pattern detected in $resource."
+
+            if [ -n "$log_file" ]; then
+                if ! grep -q "$resource" "$log_file"; then
+                    echo "$resource" >>"$log_file"
+                fi
+            fi
+
+            if [ "$delete_resource" = true ]; then
+                if ! output=$(kubectl delete "$resource_type" "$resource" "${kubectl_flags[@]}" 2>&1); then
+                    echo "    -> Failed to delete $resource: $output"
+                else
+                    echo "    -> Successfully deleted $resource."
+                fi
+            fi
+        fi
+    done
+
+    sleep "$interval"
+done

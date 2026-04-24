@@ -1,0 +1,67 @@
+# -------------------------------------------------------------------------
+# General
+# -------------------------------------------------------------------------
+[general]
+# modes=tile,click
+
+# -------------------------------------------------------------------------
+# Tile Mode
+# -------------------------------------------------------------------------
+[mode_tile]
+label_color=#ffffffff
+label_select_color=#ff5555ff
+unselectable_bg_color=#33333350
+selectable_bg_color=#1e1e2e66
+selectable_border_color=#89b4fa99
+label_font_family=sans-serif
+label_font_size=10 50% 100
+label_symbols=abcdefghijklmnopqrstuvwxyz
+
+# -------------------------------------------------------------------------
+# Floating Mode
+# -------------------------------------------------------------------------
+[mode_floating]
+source=detect
+label_color=#ffffffff
+label_select_color=#ff5555ff
+unselectable_bg_color=#33333350
+selectable_bg_color=#1e1e2ee6
+selectable_border_color=#89b4fa99
+label_font_family=sans-serif
+label_font_size=12 50% 100
+label_symbols=abcdefghijklmnopqrstuvwxyz
+
+# -------------------------------------------------------------------------
+# Bisect Mode
+# -------------------------------------------------------------------------
+[mode_bisect]
+label_color=#ffffffff
+label_font_size=20
+label_font_family=sans-serif
+label_padding=12
+pointer_size=20
+pointer_color=#f38ba8ff
+unselectable_bg_color=#33333350
+even_area_bg_color=#1e1e2e66
+even_area_border_color=#89b4fa99
+odd_area_bg_color=#31324466
+odd_area_border_color=#cba6f799
+history_border_color=#585b7099
+
+# -------------------------------------------------------------------------
+# Split Mode
+# -------------------------------------------------------------------------
+[mode_split]
+pointer_size=20
+pointer_color=#f38ba8ff
+bg_color=#00000000
+area_bg_color=#1e1e2e66
+vertical_color=#89b4fa99
+horizontal_color=#a6e3a199
+history_border_color=#585b7099
+
+# -------------------------------------------------------------------------
+# Click Mode
+# -------------------------------------------------------------------------
+[mode_click]
+button=left

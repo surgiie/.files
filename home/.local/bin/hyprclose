@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# hyprclose - Kill the active Hyprland window and focus the previously
+# focused window on the same workspace, maximizing it. Falls back to
+# the first available window on the workspace if focus history is
+# unavailable or the previously focused window no longer exists.
+#
+# Usage: hyprclose
+#
+# Intended to replace a plain `killactive` keybinding so that closing
+# a window never leaves the workspace in an unfocused/unmaximized state.
+# -------------------------------------------------------------------------
+
+set -euo pipefail
+
+# -------------------------------------------------------------------------
+# Gather state before killing
+# -------------------------------------------------------------------------
+active_json=$(hyprctl activewindow -j 2>/dev/null)
+active_address=$(echo "$active_json" | jq -r '.address // empty')
+
+if [[ -z "$active_address" || "$active_address" == "0x" ]]; then
+    exit 0
+fi
+
+active_workspace=$(echo "$active_json" | jq -r '.workspace.id')
+
+# Find the window with the lowest focusHistoryID > 0 on the same workspace
+# (focusHistoryID 0 = current window, 1 = last focused, 2 = one before that, etc.)
+next_address=$(
+    hyprctl clients -j 2>/dev/null \
+    | jq -r --argjson ws "$active_workspace" \
+        '[.[] | select(.workspace.id == $ws and .focusHistoryID > 0)]
+         | sort_by(.focusHistoryID)
+         | first
+         | .address // empty'
+)
+
+# -------------------------------------------------------------------------
+# Kill active window
+# -------------------------------------------------------------------------
+hyprctl dispatch killactive
+
+# -------------------------------------------------------------------------
+# Wait for it to disappear from the client list
+# -------------------------------------------------------------------------
+max_attempts=20
+attempt=0
+while hyprctl clients -j 2>/dev/null | jq -e --arg addr "$active_address" \
+        '.[] | select(.address == $addr)' >/dev/null 2>&1; do
+    sleep 0.05
+    attempt=$((attempt + 1))
+    if [[ $attempt -ge $max_attempts ]]; then
+        break
+    fi
+done
+
+# -------------------------------------------------------------------------
+# Resolve target: prefer last-focused, fall back to first on workspace
+# -------------------------------------------------------------------------
+if [[ -z "$next_address" || "$next_address" == "null" ]]; then
+    next_address=$(
+        hyprctl clients -j 2>/dev/null \
+        | jq -r --argjson ws "$active_workspace" \
+            '[.[] | select(.workspace.id == $ws)] | first | .address // empty'
+    )
+fi
+
+if [[ -z "$next_address" || "$next_address" == "null" || "$next_address" == "0x" ]]; then
+    exit 0
+fi
+
+# -------------------------------------------------------------------------
+# Focus and maximize
+# -------------------------------------------------------------------------
+hyprctl dispatch focuswindow address:"$next_address"
+hyprctl dispatch fullscreen 1

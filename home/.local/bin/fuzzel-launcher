@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# fuzzel-launcher - fuzzel launch-prefix wrapper that uses hyprtoggle.
+# Extracts the Exec command from a desktop file ID and launches it
+# via hyprtoggle instead of directly.
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Desktop file resolution
+# -------------------------------------------------------------------------
+DESKTOP_FILE_ID="${FUZZEL_DESKTOP_FILE_ID:-}"
+
+echo "hfuzzel: Launching with desktop file ID: $DESKTOP_FILE_ID" >/tmp/hfuzzel.log
+
+if [[ -z "$DESKTOP_FILE_ID" ]]; then
+    exec "$@"
+fi
+
+DESKTOP_FILE="/run/current-system/sw/share/applications/$DESKTOP_FILE_ID"
+
+if [[ ! -f "$DESKTOP_FILE" ]]; then
+    exec "$@"
+fi
+
+# -------------------------------------------------------------------------
+# Parse Exec and StartupWMClass from [Desktop Entry] section
+# -------------------------------------------------------------------------
+exec_cmd=""
+wm_class=""
+in_desktop_entry=false
+
+while IFS= read -r line; do
+    if [[ "$line" =~ ^\[.*\]$ ]]; then
+        if [[ "$line" == "[Desktop Entry]" ]]; then
+            in_desktop_entry=true
+        else
+            in_desktop_entry=false
+        fi
+        continue
+    fi
+
+    if [[ "$in_desktop_entry" == true ]]; then
+        if [[ "$line" =~ ^Exec= ]]; then
+            exec_cmd="${line#Exec=}"
+        elif [[ "$line" =~ ^StartupWMClass= ]]; then
+            wm_class="${line#StartupWMClass=}"
+        fi
+    fi
+done <"$DESKTOP_FILE"
+
+exec_cmd=$(echo "$exec_cmd" | sed -E 's/\s*%[UuFfDdNnickvm]+\s*/ /g; s/\s+$//; s/^\s+//')
+
+echo "hfuzzel: Cleaned exec command: $exec_cmd" >>/tmp/hfuzzel.log
+echo "hfuzzel: WM class: $wm_class" >>/tmp/hfuzzel.log
+
+# -------------------------------------------------------------------------
+# Launch
+# -------------------------------------------------------------------------
+if [[ -n "$exec_cmd" ]]; then
+    if [[ -n "$wm_class" ]]; then
+        exec hyprtoggle --exec "$exec_cmd" --class "$wm_class"
+    else
+        exec hyprtoggle --exec "$exec_cmd"
+    fi
+else
+    exec "$@"
+fi

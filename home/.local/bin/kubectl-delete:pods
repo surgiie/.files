@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# kubectl-delete:pods - delete pods matching a name prefix.
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Arguments
+# -------------------------------------------------------------------------
+prefix="${1:?A pod name prefix argument is required.}"
+shift
+
+# -------------------------------------------------------------------------
+# Find and delete
+# -------------------------------------------------------------------------
+pods=$(kubectl get pods --no-headers -o custom-columns=":metadata.name" "$@" | grep "^$prefix")
+
+if [ -z "$pods" ]; then
+    echo "No pods found with prefix: $prefix"
+    exit 0
+fi
+
+echo "$pods" | xargs kubectl delete pod "$@"

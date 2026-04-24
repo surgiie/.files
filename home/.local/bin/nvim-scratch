@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# nvim-scratch - open a temporary nvim instance in a new wezterm tab for
+# quick edits, copy its content to the clipboard on exit, then refocus
+# the previous window.
+# Useful to bind to a keybinding in Hyprland.
+# -----------------------------------------------------------------------
+
+prev_window=$(hyprctl activewindow -j | jq -r '.address')
+tmpfile=$(mktemp /tmp/nvim-scratch-XXXXXX)
+
+# Get the current wezterm window id to spawn the tab into it
+wezterm_window_id=$(wezterm cli list --format json 2>/dev/null | jq -r '.[0].window_id')
+
+if [[ -n "$wezterm_window_id" && "$wezterm_window_id" != "null" ]]; then
+    pane_id=$(wezterm cli spawn --window-id "$wezterm_window_id" -- nvim "$tmpfile")
+
+    # Focus the wezterm window
+    wezterm_address=$(hyprctl clients -j | jq -r '.[] | select(.class == "org.wezfurlong.wezterm") | .address' | head -1)
+    if [[ -n "$wezterm_address" ]]; then
+        hyprctl dispatch focuswindow "address:$wezterm_address"
+        hyprctl dispatch fullscreen 1
+    fi
+
+    # Wait for the nvim pane to exit
+    while wezterm cli list --format json 2>/dev/null | jq -e ".[] | select(.pane_id == $pane_id)" >/dev/null 2>&1; do
+        sleep 0.5
+    done
+else
+    # Fallback: no wezterm running, launch a new window
+    hyprtoggle --maximize --wait-for-exit --exec "wezterm start -- nvim '$tmpfile'"
+fi
+
+cat "$tmpfile" | wl-copy
+rm "$tmpfile"
+
+if [[ -n "$prev_window" && "$prev_window" != "null" ]]; then
+    hyprctl dispatch focuswindow "address:$prev_window"
+    hyprctl dispatch fullscreen 1
+fi
