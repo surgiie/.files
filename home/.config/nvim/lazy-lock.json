@@ -55,5 +55,6 @@
   "vim-better-whitespace": { "branch": "master", "commit": "de99b55a6fe8c96a69f9376f16b1d5d627a56e81" },
   "vim-floaterm": { "branch": "master", "commit": "0ab5eb8135dc884bc543a819ac7033c15e72a76b" },
   "vim-move": { "branch": "master", "commit": "267fd1cff61fc643dfb5f9b188c434906f5214aa" },
-  "vim-visual-multi": { "branch": "master", "commit": "a6975e7c1ee157615bbc80fc25e4392f71c344d4" }
+  "vim-visual-multi": { "branch": "master", "commit": "a6975e7c1ee157615bbc80fc25e4392f71c344d4" },
+  "yaml-language-highlight": { "branch": "main", "commit": "da4840ba5bbe6db73a583db6ef7adc524e48bb29" }
 }

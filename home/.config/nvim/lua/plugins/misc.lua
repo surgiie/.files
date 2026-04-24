@@ -20,20 +20,20 @@ return {
 			require("encbuf").setup({})
 		end,
 	},
-	-- {
-	-- 	"surgiie/yaml-language-highlight.nvim",
-	-- 	name = "yaml-language-highlight",
-	-- 	config = function()
-	-- 		require("yaml-language-highlight").setup({
-	-- 			injections = {
-	-- 				bash = { "run", "command", "entrypoint", "*.sh" },
-	-- 				php = { "php", "*.php" },
-	-- 				python = { "py", "*.py" },
-	-- 				xml = { "xml", "*.xml" },
-	-- 			},
-	-- 		})
-	-- 	end,
-	-- },
+	{
+		"surgiie/yaml-language-highlight.nvim",
+		name = "yaml-language-highlight",
+		config = function()
+			require("yaml-language-highlight").setup({
+				injections = {
+					bash = { "run", "command", "entrypoint", "*.sh" },
+					php = { "php", "*.php" },
+					python = { "py", "*.py" },
+					xml = { "xml", "*.xml" },
+				},
+			})
+		end,
+	},
 	{
 		"MeanderingProgrammer/render-markdown.nvim",
 		ft = { "markdown" },
