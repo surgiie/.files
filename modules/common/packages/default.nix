@@ -51,13 +51,6 @@
     # TypeScript/JavaScript LSP servers
     typescript-language-server
     emmet-language-server
-    # Python LSP servers
-    python313Packages.python-lsp-server
-    python313Packages.pywayland
-    python313Packages.pycairo
-    python313Packages.opencv-python
-    python313Packages.numpy
-    libxkbcommon
 
     ruff
     # Lua LSP server
