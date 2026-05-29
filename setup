@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -e
+
+host=""
+
+# Parse args
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --host)
+        host="$2"
+        shift 2
+        ;;
+    *)
+        echo "Unknown argument: $1"
+        exit 1
+        ;;
+    esac
+done
+
+# Validate host
+if [[ -z "$host" ]]; then
+    echo "Error: --host is required"
+    exit 1
+fi
+
+if [[ ! -d "$HOME/.files/hosts/$host" ]]; then
+    echo "Error: No such host $host."
+    exit 1
+fi
+# Prompt for git info
+read -p "Enter your name: " name
+read -p "Enter your email: " email
+
+# Write git config (host-specific)
+cat >~/.gitconfig_local <<EOF
+[user]
+name = $name
+email = $email
+EOF
+
+echo "Saved git config to ~/.gitconfig_local"
+
+# --- NixOS host setup logic ---
+
+# Create host file
+echo "$host" >"$HOME/nixos-host"
+echo "Wrote host to $HOME/nixos-host"
+
+# Enter nix shell with git and run nixos-sync
+echo "Entering nix-shell to run nixos-sync..."
+chmod u+x "$HOME/.files/home/.local/bin/nixos-sync"
+nix-shell -p git --run "git config --global user.name $name && git config --global user.email $email && $HOME/.files/home/.local/bin/nixos-sync"
+rm -f "$HOME/.gitconfig"
+# Remove default nixos config files
+echo "Removing default /etc/nixos/* files..."
+sudo rm -f /etc/nixos/*
+
+echo "Done."

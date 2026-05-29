@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+kubectl logs "$@" | jq -Rr '
+  . as $line |
+  ($line | index("{")) as $i |
+  if $i == null then $line
+  elif $i > 0 then ($line[:$i] | rtrimstr(" ")), (try ($line[$i:] | fromjson) catch empty)
+  else (try ($line | fromjson) catch empty)
+  end
+'

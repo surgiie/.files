@@ -1,0 +1,2 @@
+    cp $HOME/.files/home/.wezterm.common.lua /mnt/c/Users/surgiie/.wezterm.common.lua
+    cp $HOME/.files/home/.wezterm.wsl.lua /mnt/c/Users/surgiie/.wezterm.lua

@@ -1,0 +1,55 @@
+{ pkgs, ... }:
+{
+  environment.systemPackages = with pkgs; [
+    lsof
+    envsubst
+    dig
+    claude-code
+    openssl
+    tree-sitter
+    fd
+    zsh-forgit
+    gcc
+    gh
+    krew
+    kubecolor
+    cjson
+    eza
+    tree
+    wl-clipboard
+    jq
+    git
+    yq-go
+    fzf
+    devenv
+    nixfmt
+    direnv
+    htop
+    bat
+    ffmpeg
+    gnumake
+    neovim
+    vim
+    yazi
+    unzip
+    ripgrep
+    stow
+    wget
+    imagemagick
+    bash-language-server
+    shfmt
+    shellcheck
+    nodejs_24
+    typescript-language-server
+    emmet-language-server
+    ruff
+    stylua
+    lua-language-server
+    buildifier
+    socat
+    libxml2
+    lemminx
+  ];
+
+  programs.npm.enable = true;
+}

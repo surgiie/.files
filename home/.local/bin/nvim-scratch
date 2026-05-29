@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# nvim-scratch - open a temporary nvim instance in a new wezterm tab for
+# quick edits, copy its content to the clipboard on exit, then refocus
+# the previous window.
+# Useful to bind to a keybinding in Hyprland.
+# -----------------------------------------------------------------------
+
+tmpfile=$(mktemp /tmp/nvim-scratch-XXXXXX)
+
+wezterm-tab --close-on-exit --wait-for-exit --focus-previous nvim "$tmpfile"
+
+if [[ -s "$tmpfile" ]]; then
+    wl-copy < "$tmpfile"
+fi
+rm "$tmpfile"

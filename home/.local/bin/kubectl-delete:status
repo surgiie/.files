@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+pods="$(kubectl get pods --all-namespaces | grep Evicted | awk '{print $1 " -n " $2}')"
+
+if [ -z "$pods" ]; then
+    echo "No evicted pods found."
+else
+    echo "The following pods will be deleted:"
+    echo "$pods" | sed 's/^/kubectl delete pod /'
+
+    read -p "Proceed? [y/N] " confirm
+
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        echo "$pods" | xargs -L1 kubectl delete pod
+    else
+        echo "Aborted."
+    fi
+fi

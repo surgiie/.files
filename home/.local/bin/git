@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# git - wrapper around git that adds custom subcommands.
+#
+# Custom subcommands:
+#   recent   - list remote branches sorted by most recent commit date
+#   parent   - find the parent branch of the current branch
+#   rewrite  - interactive rebase from divergence point of parent branch
+#   compare  - open GitHub compare/PR view for current branch in browser
+#   browse   - open GitHub tree view for current branch in browser
+#   add      - proxy to forgit add when no paths given
+#   fresh     - nuke git history and create a fresh initial commit
+# -----------------------------------------------------------------------
+
+# Find the real git binary (skip this script itself)
+_GIT=$(PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "$(dirname "$0")" | tr '\n' ':') command -v git)
+
+cmd="git-forgit"
+if [ -n "$FORGIT" ]; then
+    cmd="$FORGIT"
+fi
+
+case "$1" in
+recent)
+    $_GIT branch -r --sort=-committerdate --format="%(committerdate:relative)%09%(refname:short)"
+    ;;
+rewrite)
+    base=$($_GIT log --oneline --decorate | fzf --prompt="rebase from> " | awk '{print $1}')
+    [[ -z "$base" ]] && exit 0
+    $_GIT rebase -i "${base}^"
+    ;;
+compare)
+    branch=$($_GIT branch --show-current)
+    url=$($_GIT config --get remote.origin.url | sed -Ee 's#(git@|git://)#https://#' -e 's@com:@com/@' -e 's/\.git$//')
+    (xdg-open "$url/compare/$branch?expand=1" &>/dev/null &)
+    ;;
+browse)
+    branch=$($_GIT branch --show-current)
+    url=$($_GIT config --get remote.origin.url | sed -Ee 's#(git@|git://)#https://#' -e 's@com:@com/@' -e 's/\.git$//')
+    (xdg-open "$url/tree/$branch" &>/dev/null &)
+    ;;
+add)
+    if [ $# -eq 1 ]; then
+        $cmd add
+    else
+        shift
+        $_GIT add "$@"
+    fi
+    ;;
+fresh)
+    remote_url=$($_GIT config --get remote.origin.url 2>/dev/null)
+    if ! echo "$remote_url" | grep -qE '(github\.com[:/])surgiie/'; then
+        echo "error: 'git fresh' is only allowed on surgiie/* repositories." >&2
+        exit 1
+    fi
+    msg="${2:-initial}"
+    $_GIT checkout --orphan fresh-start
+    $_GIT add -A
+    $_GIT commit -m "$msg"
+    default_branch=$($_GIT config init.defaultBranch 2>/dev/null || echo "main")
+    $_GIT branch -M "$default_branch"
+    $_GIT tag | xargs -r $_GIT tag -d
+    echo "Git history and tags nuked. Fresh initial commit created on '$default_branch'."
+    ;;
+*)
+    $_GIT "$@"
+    ;;
+esac

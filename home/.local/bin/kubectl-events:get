@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# kubectl-events:get - get events for resources whose name contains a value.
+# -------------------------------------------------------------------------
+
+set -euo pipefail
+
+# -------------------------------------------------------------------------
+# Arguments
+# -------------------------------------------------------------------------
+for_value=""
+
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --for)
+            for_value="${2:?--for requires a value}"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [[ -z "$for_value" ]]; then
+    echo "Usage: kubectl events:get --for <value> [kubectl flags...]" >&2
+    exit 1
+fi
+
+# -------------------------------------------------------------------------
+# Get events whose involved object name contains the given value
+# -------------------------------------------------------------------------
+kubectl get events "$@" \
+    --sort-by='.lastTimestamp' \
+    -o json \
+    | jq -r --arg val "$for_value" '
+        .items[]
+        | select(.involvedObject.name | contains($val))
+        | [
+            .lastTimestamp,
+            .type,
+            (.involvedObject.kind + "/" + .involvedObject.name),
+            .reason,
+            .message
+          ]
+        | @tsv
+    ' \
+    | column -t -s $'\t'

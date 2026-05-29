@@ -1,0 +1,468 @@
+#!/usr/bin/env bash
+# gh:pr — browse PRs with pending reviews, open selection in browser
+#
+# USAGE:
+#   gh:pr [--reviewer USER ...] [--team ORG/TEAM ...] [--exclude PATTERN ...] [--org ORG]
+#
+# FLAGS:
+#   --reviewer USER       GitHub username to filter by (repeatable)
+#   --team ORG/TEAM       GitHub team slug, e.g. myorg/backend (repeatable)
+#   --exclude PATTERN     Glob-style repo name to exclude, e.g. "*.old" or "sandbox-*" (repeatable)
+#   --include PATTERN     Glob-style repo name to include after exclusions, e.g. "prefix-*" (repeatable)
+#   --org ORG             GitHub org (defaults to current repo's org, or GH_ORG env var)
+#   --author USER         Filter by PR author login (repeatable)
+#   --non-interactive     Print all PR URLs to stdout and exit (no fzf)
+#   --cache               Reuse cached results (default TTL: 15m)
+#   --cache-ttl TTL       Override cache TTL (e.g. 5m, 1h, 30s). Implies --cache
+#   --debug               Print raw API responses for troubleshooting
+#   --help                Show this help
+#
+# DEPENDENCIES:
+#   gh (authenticated), fzf, jq
+#
+# INSTALL:
+#   chmod +x gh:pr && mv gh:pr /usr/local/bin/gh:pr
+
+set -euo pipefail
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+die() {
+    echo "❌  $*" >&2
+    exit 1
+}
+info() { [[ "$NON_INTERACTIVE" == "1" ]] && return; echo "ℹ️  $*" >&2; }
+debug() { [[ "$DEBUG" == "1" ]] && echo "🐛  $*" >&2 || true; }
+
+require() {
+    for cmd in "$@"; do
+        command -v "$cmd" &>/dev/null || die "'$cmd' is required but not found."
+    done
+}
+
+# ── arg parsing ───────────────────────────────────────────────────────────────
+
+REVIEWERS=()
+TEAMS=()
+EXCLUDES=()
+INCLUDES=()
+AUTHORS=()
+ORG="${GH_ORG:-}"
+DEBUG=0
+NON_INTERACTIVE=0
+USE_CACHE=0
+CACHE_TTL="15m"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --reviewer)
+        shift
+        REVIEWERS+=("$1")
+        ;;
+    --team)
+        shift
+        TEAMS+=("$1")
+        ;;
+    --exclude)
+        shift
+        EXCLUDES+=("$1")
+        ;;
+    --include)
+        shift
+        INCLUDES+=("$1")
+        ;;
+    --org)
+        shift
+        ORG="$1"
+        ;;
+    --author) shift; AUTHORS+=("$1") ;;
+    --non-interactive) NON_INTERACTIVE=1 ;;
+    --cache) USE_CACHE=1 ;;
+    --cache-ttl) shift; CACHE_TTL="$1"; USE_CACHE=1 ;;
+    --debug) DEBUG=1 ;;
+    --help | -h)
+        sed -n '/^# USAGE/,/^[^#]/{ /^[^#]/d; s/^# \{0,2\}//; p }' "$0"
+        exit 0
+        ;;
+    *) die "Unknown flag: $1. Try --help." ;;
+    esac
+    shift
+done
+
+require gh fzf jq
+
+# ── resolve org ───────────────────────────────────────────────────────────────
+
+if [[ -z "$ORG" ]]; then
+    ORG=$(gh repo view --json owner --jq '.owner.login' 2>/dev/null || true)
+fi
+[[ -n "$ORG" ]] || die "Could not determine org. Pass --org ORG or set GH_ORG env var."
+
+debug "Org: $ORG  |  Reviewers: [${REVIEWERS[*]:-any}]  |  Teams: [${TEAMS[*]:-any}]"
+
+# ── GraphQL: paginated search — fetches ALL matching PRs ─────────────────────
+# gh search prs caps at 1000; gh api GraphQL with cursors has no cap.
+
+graphql_search_all() {
+    local query_str="$1" # e.g. "is:open is:pr org:myorg review-requested:alice"
+    local all_results="[]"
+    local cursor=""
+    local page=0
+
+    debug "Paginating search: $query_str"
+
+    while true; do
+        page=$((page + 1))
+
+        local after_arg="null"
+        [[ -n "$cursor" ]] && after_arg="\"$cursor\""
+
+        local gql
+        gql=$(
+            cat <<GQL
+{
+  search(query: "$query_str", type: ISSUE, first: 100, after: $after_arg) {
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest {
+        number
+        title
+        isDraft
+        updatedAt
+        url
+        author { login }
+        repository { name nameWithOwner }
+        labels(first: 10) { nodes { name } }
+        reviewRequests(first: 20) {
+          nodes {
+            requestedReviewer {
+              ... on User { __typename login }
+              ... on Team { __typename name }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+GQL
+        )
+
+        # Write query to a temp file — gh api graphql misparses @- from stdin
+        local qfile
+        qfile=$(mktemp /tmp/gh-gql-XXXXXX.graphql)
+        printf '%s' "$gql" >"$qfile"
+
+        local response
+        response=$(gh api graphql -F query=@"$qfile" 2>&1)
+        local exit_code=$?
+        rm -f "$qfile"
+
+        if [[ $exit_code -ne 0 ]]; then
+            info "GraphQL query failed on page $page: $response"
+            break
+        fi
+
+        debug "Page $page response (first 300): ${response:0:300}"
+
+        # Filter to only PullRequest nodes (search returns Issues too)
+        local nodes
+        nodes=$(echo "$response" | jq '[.data.search.nodes[] | select(.url != null and .number != null)]')
+
+        local count
+        count=$(echo "$nodes" | jq 'length')
+        debug "  Page $page: $count PR(s)"
+        [[ -n "${SPIN_MSG_FILE:-}" ]] && printf "page %d (%d found so far)" "$page" "$(echo "$all_results" | jq 'length')" >"$SPIN_MSG_FILE"
+
+        if [[ "$count" -gt 0 ]]; then
+            all_results=$(jq -s '.[0] + .[1]' <(echo "$all_results") <(echo "$nodes"))
+        fi
+
+        local has_next
+        has_next=$(echo "$response" | jq -r '.data.search.pageInfo.hasNextPage')
+        [[ "$has_next" == "true" ]] || break
+
+        cursor=$(echo "$response" | jq -r '.data.search.pageInfo.endCursor')
+    done
+
+    echo "$all_results"
+}
+
+# ── normalize GraphQL shape to match our PR schema ───────────────────────────
+
+normalize_prs() {
+    jq '
+    map({
+      number,
+      title,
+      isDraft,
+      updatedAt,
+      url,
+      author,
+      repository,
+      labels: (.labels.nodes // []),
+      reviewRequests: (
+        .reviewRequests.nodes // [] |
+        map(.requestedReviewer | select(. != null)) |
+        map(
+          if .__typename == "User" then { login }
+          elif .__typename == "Team" then { name }
+          else .
+          end
+        )
+      )
+    })
+  '
+}
+
+# ── apply glob exclusions/inclusions (pure jq) ───────────────────────────────
+
+glob_match() {
+    # Emit a jq expression that tests if $name matches a glob pattern list
+    # Usage: used inline in jq via --argjson
+    echo '
+      def glob_match(name; patterns):
+        [ patterns[] | . as $pat |
+          if $pat == "*" then true
+          elif (startswith("*") and endswith("*")) then name | contains($pat[1:-1])
+          elif startswith("*") then name | endswith($pat[1:])
+          elif endswith("*") then name | startswith($pat[:-1])
+          else name == $pat
+          end
+        ] | any;
+    '
+}
+
+apply_exclusions() {
+    local json="$1"
+    [[ ${#EXCLUDES[@]} -eq 0 && ${#INCLUDES[@]} -eq 0 ]] && { echo "$json"; return; }
+
+    local excludes_json includes_json
+    excludes_json=$(printf '%s\n' "${EXCLUDES[@]:-}" | jq -Rsc 'split("\n") | map(select(length>0))')
+    includes_json=$(printf '%s\n' "${INCLUDES[@]:-}" | jq -Rsc 'split("\n") | map(select(length>0))')
+
+    echo "$json" | jq \
+        --argjson excludes "$excludes_json" \
+        --argjson includes "$includes_json" '
+      def glob_match(name; patterns):
+        [ patterns[] | . as $pat |
+          if $pat == "*" then true
+          elif (startswith("*") and endswith("*")) then name | contains($pat[1:-1])
+          elif startswith("*") then name | endswith($pat[1:])
+          elif endswith("*") then name | startswith($pat[:-1])
+          else name == $pat
+          end
+        ] | any;
+      [ .[] |
+        . as $pr | ($pr.repository.name) as $name |
+        select(
+          (($excludes | length) == 0 or (glob_match($name; $excludes) | not)) or
+          (($includes | length) > 0 and glob_match($name; $includes))
+        )
+      ]
+    '
+}
+
+# ── build search query strings ────────────────────────────────────────────────
+
+build_queries() {
+    if [[ ${#REVIEWERS[@]} -eq 0 && ${#TEAMS[@]} -eq 0 ]]; then
+        echo "is:open is:pr org:${ORG}"
+    else
+        for user in "${REVIEWERS[@]}"; do
+            echo "is:open is:pr org:${ORG} review-requested:${user}"
+        done
+        for team in "${TEAMS[@]}"; do
+            [[ "$team" == */* ]] || team="${ORG}/${team}"
+            echo "is:open is:pr org:${ORG} team-review-requested:${team}"
+        done
+    fi
+}
+
+# ── cache helpers ─────────────────────────────────────────────────────────────
+
+ttl_to_seconds() {
+    local ttl="$1"
+    local num="${ttl%[smh]}"
+    case "$ttl" in
+        *h) echo $((num * 3600)) ;;
+        *m) echo $((num * 60)) ;;
+        *s) echo "$num" ;;
+        *)  echo "$num" ;;
+    esac
+}
+
+cache_key() {
+    printf '%s|%s|%s|%s|%s' "$ORG" "${REVIEWERS[*]:-}" "${TEAMS[*]:-}" "${EXCLUDES[*]:-}" "${INCLUDES[*]:-}" \
+        | md5sum | cut -d' ' -f1
+}
+
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/gh-pr"
+CACHE_FILE=""
+if [[ "$USE_CACHE" == "1" ]]; then
+    mkdir -p "$CACHE_DIR"
+    CACHE_FILE="$CACHE_DIR/$(cache_key).json"
+fi
+
+# ── main: fetch all pages for all queries ─────────────────────────────────────
+
+all_prs="[]"
+
+if [[ -n "$CACHE_FILE" && -f "$CACHE_FILE" ]]; then
+    ttl_secs=$(ttl_to_seconds "$CACHE_TTL")
+    age=$(( $(date +%s) - $(date -r "$CACHE_FILE" +%s) ))
+    if [[ "$age" -lt "$ttl_secs" ]]; then
+        info "Using cached results (${age}s old, TTL ${CACHE_TTL})"
+        all_prs=$(cat "$CACHE_FILE")
+    fi
+fi
+
+if [[ "$all_prs" == "[]" ]]; then
+    SPIN_MSG_FILE=$(mktemp)
+    export SPIN_MSG_FILE
+    printf "starting..." >"$SPIN_MSG_FILE"
+
+    spin() {
+        local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+        local i=0
+        while true; do
+            local msg
+            msg=$(cat "$SPIN_MSG_FILE" 2>/dev/null)
+            printf "\r\033[K%s Fetching PRs... %s" "${frames[$((i % 10))]}" "$msg" >&2
+            i=$((i + 1))
+            sleep 0.1
+        done
+    }
+
+    spin &
+    SPIN_PID=$!
+    trap 'kill "$SPIN_PID" 2>/dev/null; rm -f "$SPIN_MSG_FILE"; printf "\r\033[K" >&2' EXIT
+
+    while IFS= read -r query; do
+        result=$(graphql_search_all "$query" | normalize_prs)
+        count=$(echo "$result" | jq 'length')
+        debug "Total from query: $count"
+        if [[ "$count" -gt 0 ]]; then
+            all_prs=$(jq -s '.[0] + .[1] | unique_by(.url)' \
+                <(echo "$all_prs") <(echo "$result"))
+        fi
+    done < <(build_queries)
+
+    kill "$SPIN_PID" 2>/dev/null
+    rm -f "$SPIN_MSG_FILE"
+    printf "\r\033[K" >&2
+
+    [[ -n "$CACHE_FILE" ]] && echo "$all_prs" >"$CACHE_FILE"
+fi
+
+raw_count=$(echo "$all_prs" | jq 'length')
+debug "Found $raw_count PR(s) total"
+
+if [[ "$raw_count" -eq 0 ]]; then
+    echo "" >&2
+    echo "No PRs found. Things to check:" >&2
+    echo "  • Run with --debug to inspect responses" >&2
+    echo "  • Test: gh search prs is:open is:pr org:${ORG}" >&2
+    echo "  • Check auth: gh auth status" >&2
+    exit 0
+fi
+
+# ── exclude first (cheap), then we already have reviewer data from GraphQL ────
+
+filtered_prs=$(apply_exclusions "$all_prs")
+after_count=$(echo "$filtered_prs" | jq 'length')
+excluded=$((raw_count - after_count))
+[[ "$excluded" -gt 0 ]] && info "Excluded $excluded PR(s) via --exclude patterns"
+[[ "$after_count" -gt 0 ]] || {
+    echo "All PRs were excluded by --exclude filters."
+    exit 0
+}
+
+if [[ ${#AUTHORS[@]} -gt 0 ]]; then
+    authors_json=$(printf '%s\n' "${AUTHORS[@]}" | jq -Rsc 'split("\n") | map(select(length>0))')
+    filtered_prs=$(echo "$filtered_prs" | jq --argjson authors "$authors_json" '[.[] | select(.author.login as $a | $authors | any(. == $a))]')
+    after_count=$(echo "$filtered_prs" | jq 'length')
+fi
+
+info "Org: $ORG | Reviewers: [${REVIEWERS[*]:-any}] | Teams: [${TEAMS[*]:-any}] | Showing $after_count PR(s)"
+
+# ── format for fzf ────────────────────────────────────────────────────────────
+
+truncate_str() {
+    local s="$1" max="$2"
+    if [[ ${#s} -gt $max ]]; then
+        echo "${s:0:$((max - 1))}…"
+    else
+        echo "$s"
+    fi
+}
+
+format_prs() {
+    echo "$filtered_prs" | jq -r '
+    def trunc(s; n): if (s | length) > n then (s[0:n-1] + "…") else s end;
+    .[] |
+    (
+      .reviewRequests // [] |
+      map(
+        if has("login") then .login
+        elif has("name") then ("🔵 " + .name)
+        else (. | tostring)
+        end
+      ) | if length == 0 then "—" else join(", ") end
+    ) as $reviewers |
+    (if .isDraft then "[DRAFT] " else "" end) as $draft |
+    (.updatedAt | split("T")[0]) as $date |
+    (.repository.nameWithOwner + "#" + (.number | tostring)) as $ref |
+    [
+      trunc($ref; 45),
+      trunc($draft + .title; 55),
+      trunc("@" + .author.login; 20),
+      trunc($reviewers; 30),
+      $date
+    ] | join("\t")
+  '
+}
+
+# ── non-interactive mode ─────────────────────────────────────────────────────
+
+if [[ "$NON_INTERACTIVE" == "1" ]]; then
+    echo "$filtered_prs" | jq -r '.[].url'
+    exit 0
+fi
+
+# ── fzf picker ────────────────────────────────────────────────────────────────
+
+FZF_PREVIEW='
+  ref={1}
+  repo=$(echo "$ref" | cut -d"#" -f1)
+  num=$(echo "$ref" | cut -d"#" -f2 | tr -d " ")
+  gh pr view "$num" --repo "$repo" 2>/dev/null || echo "Could not load preview for $repo #$num"
+'
+
+selected=$(format_prs | awk -F'\t' '{printf "%-45s  %-55s  %-20s  %-30s  %s\n", $1, $2, $3, $4, $5}' | fzf \
+    --ansi \
+    --prompt="🔍 PR > " \
+    --header="$(printf '%-46s %-56s %-21s %-31s %s' 'REPO#PR' 'TITLE' 'AUTHOR' 'REVIEWERS' 'DATE')" \
+    --preview="$FZF_PREVIEW" \
+    --preview-window="down:40%:wrap" \
+    --height=90% \
+    --layout=reverse \
+    --border=rounded \
+    --info=inline ||
+    true)
+
+[[ -n "$selected" ]] || {
+    echo "No selection made."
+    exit 0
+}
+
+# ── open in browser ───────────────────────────────────────────────────────────
+
+ref=$(echo "$selected" | awk '{print $1}')
+repo=$(echo "$ref" | cut -d'#' -f1)
+number=$(echo "$ref" | cut -d'#' -f2)
+
+[[ -n "$repo" && -n "$number" ]] || die "Could not parse selection: $selected"
+
+info "Opening $repo #$number..."
+gh pr view "$number" --repo "$repo" --web

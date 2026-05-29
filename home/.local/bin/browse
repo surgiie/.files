@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# browse - force focus an existing browser window or launch a new one.
+# Hyprland doesn't focus existing browsers when opened via xdg-open,
+# so this is a workaround. After running `stow home` which symlinks the
+# home/.local/share/applications/browse.desktop file, the zshrc does
+# `xdg-settings set default-web-browser browse.desktop` so xdg-open
+# uses this script.
+# -----------------------------------------------------------------------
+
+# -----------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------
+BROWSER="google-chrome-stable"
+BROWSER_CLASS="google-chrome"
+BOOKMARKS_FILE="$HOME/.config/google-chrome/Default/Bookmarks"
+
+# -----------------------------------------------------------------------
+# Arguments
+# -----------------------------------------------------------------------
+if [[ "$1" == "-b" || "$1" == "--bookmarks" ]]; then
+    URL=$(jq -r '
+        .roots | .. | objects | select(has("type") and .type == "url") |
+        (if .name == "" then .url else .name end) + "\t" + .url
+    ' "$BOOKMARKS_FILE" | fzf --with-nth=1 --delimiter='\t' --tty | cut -f2)
+
+    [[ -z "$URL" ]] && exit 0
+elif [[ "$1" == "-s" || "$1" == "--search" ]]; then
+    shift
+    SEARCH_QUERY="${*// /+}"
+    URL="https://www.google.com/search?q=$SEARCH_QUERY"
+else
+    URL="$1"
+fi
+
+# -----------------------------------------------------------------------
+# Launch or focus browser
+# -----------------------------------------------------------------------
+"$BROWSER" "$URL" &>/dev/null &
+
+# Poll until the browser window appears (up to 5s)
+for _ in $(seq 1 50); do
+    hyprctl clients -j | jq -e ".[] | select(.class == \"$BROWSER_CLASS\")" &>/dev/null && break
+    sleep 0.1
+done
+
+hyprctl dispatch "hl.dsp.focus({window='class:$BROWSER_CLASS'})" &>/dev/null
+
+fullscreen=$(hyprctl activewindow -j | jq -r '.fullscreen')
+if [[ "$fullscreen" != "2" ]]; then
+    hyprctl dispatch 'hl.dsp.window.fullscreen_state({internal=2, client=0, action="set"})' &>/dev/null
+fi

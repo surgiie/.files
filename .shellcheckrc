@@ -1,0 +1,19 @@
+# -------------------------------------------------------------------------
+# ShellCheck Configuration
+# -------------------------------------------------------------------------
+# Disable rules by adding: disable=SCXXXX
+# Full list: https://www.shellcheck.net/wiki/
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Disabled Rules
+# -------------------------------------------------------------------------
+disable=SC2148  # zshrc has no shebang — it's a zsh file, not a script
+disable=SC2034  # zsh theme/config vars appear unused to shellcheck but are read by plugins
+disable=SC1091  # don't follow sourced files (boot, wslrc, theme files)
+disable=SC2154  # zsh read prompt syntax assigns vars shellcheck can't see
+disable=SC2162  # zsh read uses prompt syntax incompatible with -r
+disable=SC1083  # @{u} is valid zsh syntax, not a literal brace error
+disable=SC2016  # single-quoted zsh prompt expressions are intentional
+disable=SC2206  # zsh cdpath array assignment doesn't need quoting
+disable=SC2329  # functions invoked indirectly (e.g. via name stored in variable)

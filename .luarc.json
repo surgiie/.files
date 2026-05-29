@@ -1,0 +1,21 @@
+{
+  "diagnostics": {
+    "globals": [
+      "vim",
+      "hl",
+      "_G",
+    ],
+    "unusedLocalExclude": [
+      "_",
+    ]
+  },
+  "runtime": {
+    "version": "LuaJIT"
+  },
+  "workspace": {
+    "library": [
+      "${3rd}/luassert/library"
+    ],
+    "checkThirdParty": false
+  }
+}
