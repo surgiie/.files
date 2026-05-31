@@ -81,7 +81,9 @@ hl.bind(mainMod .. " + SHIFT + 0", hl.dsp.window.move({ workspace = 10 }))
 -- -------------------------------------------------------------------------
 hl.bind(
 	mainMod .. " + M",
-	exec("pgrep -x wl-kbptr > /dev/null && pkill -x wl-kbptr || (wl-kbptr -o modes=floating,click;)")
+	exec(
+		"pgrep -x wl-kbptr > /dev/null && pkill -x wl-kbptr || (wl-kbptr -o modes=floating,click -o mode_floating.source=detect;)"
+	)
 )
 hl.bind(mainMod .. " + SHIFT + M", exec("pkill -x wl-kbptr; wl-kbptr -o modes=tile,click;"))
 

@@ -25,7 +25,7 @@ vim.opt.termguicolors = true
 vim.opt.cmdheight = 0
 vim.o.laststatus = 3
 vim.opt.list = true
-vim.opt.listchars = { trail = "·" }
+vim.opt.listchars = { trail = "·", tab = "   " }
 
 vim.opt.fillchars = {
 	horiz = "━",
