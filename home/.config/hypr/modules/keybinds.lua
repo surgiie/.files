@@ -87,17 +87,17 @@ hl.bind(
 )
 hl.bind(mainMod .. " + SHIFT + M", exec("pkill -x wl-kbptr; wl-kbptr -o modes=tile,click;"))
 
-hl.bind(mainMod .. " + C", hl.dsp.submap("cursor"))
-hl.define_submap("cursor", "reset", function()
+hl.define_submap("cursor", "none", function()
 	hl.bind("J", exec("wlrctl pointer move 0 10"), { repeating = true })
 	hl.bind("K", exec("wlrctl pointer move 0 -10"), { repeating = true })
 	hl.bind("L", exec("wlrctl pointer move 10 0"), { repeating = true })
 	hl.bind("H", exec("wlrctl pointer move -10 0"), { repeating = true })
 	hl.bind("space", exec("wlrctl pointer click left"), { repeating = true })
 	hl.bind("SHIFT+space", exec("wlrctl pointer click right"), { repeating = true })
-	hl.bind("escape", hl.dsp.submap("reset"))
-	hl.bind(mainMod .. " + C", hl.dsp.submap("reset"))
+	hl.bind("escape", hl.dsp.submap(""))
+
 end)
+hl.bind(mainMod .. " + C", hl.dsp.submap("cursor"))
 
 -- -------------------------------------------------------------------------
 -- Misc
