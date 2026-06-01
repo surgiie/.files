@@ -23,6 +23,7 @@ if [[ -z "$active_address" || "$active_address" == "0x" ]]; then
     exit 0
 fi
 
+active_pid=$(echo "$active_json" | jq -r '.pid // empty')
 active_workspace=$(echo "$active_json" | jq -r '.workspace.id')
 
 # Find the window with the lowest focusHistoryID > 0 on the same workspace
@@ -39,9 +40,13 @@ next_address=$(
 active_fullscreen=$(echo "$active_json" | jq -r '.fullscreen // 0')
 
 # -------------------------------------------------------------------------
-# Kill active window (use pkill for apps that reopen after killactive)
+# Kill active window by pid to avoid closing a re-focused window
 # -------------------------------------------------------------------------
-hyprctl dispatch 'hl.dsp.window.close()'
+if [[ -n "$active_pid" && "$active_pid" != "null" ]]; then
+    kill -15 "$active_pid" 2>/dev/null || kill -9 "$active_pid" 2>/dev/null || true
+else
+    hyprctl dispatch 'hl.dsp.window.close()'
+fi
 
 # -------------------------------------------------------------------------
 # Wait for it to disappear from the client list

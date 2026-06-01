@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -z "${1:-}" ]]; then
+    echo "Usage: kubectl pod:debug <pod-name>" >&2
+    exit 1
+fi
+
+kubectl get pod "$1" -o yaml \
+    | kubectl neat \
+    | yq '
+        .metadata.name = "debug-" + .metadata.name |
+        del(.metadata.ownerReferences) |
+        del(.metadata.labels) |
+        .spec.restartPolicy = "Never" |
+        .spec.containers[0].command = ["sleep","infinity"] |
+        .spec.containers[0].securityContext.runAsUser = 0
+    ' \
+    | kubectl apply -f -
