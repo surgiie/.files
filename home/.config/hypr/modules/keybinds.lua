@@ -40,6 +40,9 @@ hl.bind(mainMod .. " + V", exec("nvim-scratch"))
 -- Windows
 -- -------------------------------------------------------------------------
 hl.bind(mainMod .. " + backspace", function()
+	if hl.get_last_window() == nil then
+		return
+	end
 	hl.dispatch(hl.dsp.focus({ last = true }))
 	hl.timer(function()
 		hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 2, client = 0, action = "set" }))
