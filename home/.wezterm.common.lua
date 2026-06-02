@@ -130,6 +130,7 @@ function M.apply(config, opts)
 	-- ── Key bindings ─────────────────────────────────────────────────────────
 	config.keys = {
 		{ mods = "LEADER", key = "t", action = wezterm.action.SpawnTab("CurrentPaneDomain") },
+		{ mods = "LEADER", key = "x", action = wezterm.action.CloseCurrentTab({ confirm = false }) },
 		{
 			mods = "LEADER",
 			key = "/",
