@@ -165,6 +165,11 @@ return {
 						cmd = "<cmd>lua require('spectre').toggle_live_update()<CR>",
 						desc = "update when vim writes to file",
 					},
+					["show_help"] = {
+						map = "<S-h>",
+						cmd = "<cmd>lua require('spectre').show_help()<CR>",
+						desc = "show help",
+					},
 					["toggle_ignore_case"] = {
 						map = "ti",
 						cmd = "<cmd>lua require('spectre').change_options('ignore-case')<CR>",
