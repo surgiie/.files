@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+pod="${1:-}"
+
+if [[ -z "$pod" ]]; then
+    pod=$(kubectl get pods --all-namespaces --no-headers \
+        -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name' \
+        | fzf --prompt='pod> ' | awk '{print $1"/"$2}')
+    [[ -z "$pod" ]] && exit 0
+fi
+
+ns="${pod%%/*}"
+name="${pod##*/}"
+
+if [[ "$ns" == "$name" ]]; then
+    kubectl get pod "$name" -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'
+else
+    kubectl get pod "$name" -n "$ns" -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'
+fi
