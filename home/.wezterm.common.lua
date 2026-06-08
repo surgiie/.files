@@ -157,7 +157,7 @@ function M.apply(config, opts)
 			action = wezterm.action.QuickSelectArgs({
 				label = "open url",
 				patterns = { '"(https?://[^"]+)"', "'(https?://[^']+)'", "https?://[^\\s\"']+" },
-				skip_action_on_paste = true,
+				-- skip_action_on_paste = true,
 				action = wezterm.action_callback(function(window, pane)
 					local url = window:get_selection_text_for_pane(pane)
 					wezterm.log_info("opening: " .. url)
