@@ -1,2 +1,22 @@
     cp $HOME/.files/home/.wezterm.common.lua /mnt/c/Users/surgiie/.wezterm.common.lua
     cp $HOME/.files/home/.wezterm.wsl.lua /mnt/c/Users/surgiie/.wezterm.lua
+
+    mkdir -p /mnt/c/Users/surgiie/AppData/Roaming/kanata
+    cp $HOME/.files/home/.config/kanata/kanata.kbd /mnt/c/Users/surgiie/AppData/Roaming/kanata/kanata.kbd
+
+    if [ ! -f /mnt/d/kanata/kanata.exe ]; then
+        echo "kanata not found, downloading..."
+        mkdir -p /mnt/d/kanata
+        zip_url=$(curl -sf https://api.github.com/repos/jtroo/kanata/releases/latest \
+            | grep -o '"browser_download_url": "[^"]*windows-binaries-x64\.zip"' \
+            | grep -o 'https://[^"]*')
+        if [ -z "$zip_url" ]; then
+            echo "ERROR: could not resolve kanata download URL" >&2
+        else
+            tmp=$(mktemp /tmp/kanata-XXXX.zip)
+            curl -sL -o "$tmp" "$zip_url" \
+                && unzip -p "$tmp" kanata_windows_gui_winIOv2_x64.exe > /mnt/d/kanata/kanata.exe \
+                && echo "kanata downloaded to /mnt/d/kanata/kanata.exe"
+            rm -f "$tmp"
+        fi
+    fi

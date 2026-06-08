@@ -1,0 +1,44 @@
+;; Mirrors keyd config for use on the Windows host.
+;;
+;; ctrl+h/j/k/l → left / down / up / right
+;; ctrl+bspc    → escape
+;;
+;; Run on Windows (as administrator):
+;;   kanata.exe --cfg "%APPDATA%\kanata\kanata.kbd"
+
+(defcfg
+  process-unmapped-keys yes
+)
+
+(defsrc
+  lctl rctl
+  h    j    k    l
+  bspc
+)
+
+(defalias
+  ;; Both ctrl keys: emit ctrl AND activate nav layer while held.
+  ctl  (multi lctl  (layer-while-held ctrl-nav))
+  rctl (multi rctl  (layer-while-held ctrl-nav))
+
+  ;; unmod temporarily releases all held modifiers (ctrl) before sending
+  ;; the key, then restores them — so apps see a plain arrow, not ctrl+arrow.
+  ch (unmod left)
+  cj (unmod down)
+  ck (unmod up)
+  cl (unmod right)
+  cb (unmod esc)
+)
+
+(deflayer base
+  @ctl @rctl
+  h    j    k    l
+  bspc
+)
+
+;; Active while either ctrl key is held.
+(deflayer ctrl-nav
+  _    _
+  @ch  @cj  @ck  @cl
+  @cb
+)
