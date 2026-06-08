@@ -12,6 +12,9 @@ return {
 			}
 		end,
 	},
+	{
+		"tris203/precognition.nvim",
+	},
 	-- Neovim API completions and type annotations for lua files
 	{
 		"folke/lazydev.nvim",
