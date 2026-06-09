@@ -115,6 +115,11 @@ if command -v xdg-settings &>/dev/null; then
 fi
 
 # -------------------------------------------------------------------------
+# Functions
+# -------------------------------------------------------------------------
+source "$HOME/.zsh_functions"
+
+# -------------------------------------------------------------------------
 # Dotfiles
 # -------------------------------------------------------------------------
 if ! git -C "$HOME/.files" diff --quiet @{u}..HEAD 2>/dev/null; then
@@ -154,14 +159,8 @@ cdpath=(
     $HOME/projects
 )
 
-# -------------------------------------------------------------------------
-# Functions
-# -------------------------------------------------------------------------
-source "$HOME/.zsh_functions"
-
 # fixes git branch not showing up in bullet train theme: https://github.com/ohmyzsh/ohmyzsh/issues/12336
 zstyle ':omz:alpha:lib:git' async-prompt no
-
 # -------------------------------------------------------------------------
 # Prompt
 # -------------------------------------------------------------------------
@@ -232,7 +231,11 @@ if [[ ! -d "$HOME/.oh-my-zsh/custom/plugins/fzf-tab" ]]; then
     git clone https://github.com/Aloxaf/fzf-tab "$HOME/.oh-my-zsh/custom/plugins/fzf-tab"
 fi
 source "$HOME/.oh-my-zsh/custom/plugins/fzf-tab/fzf-tab.plugin.zsh"
-source /run/current-system/sw/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+if [[ -f /run/current-system/sw/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+    source /run/current-system/sw/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+elif [[ -f /run/current-system/sw/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+    source /run/current-system/sw/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+fi
 
 # -------------------------------------------------------------------------
 # Boot
