@@ -230,7 +230,7 @@ function M.apply(config, opts)
 	vim_modes.apply_to_config(config, {
 		commands = opts.commands or {},
 		icon = opts.icon or "",
-		should_run = function(pane, default_check)
+		should_run = opts.should_run or function(pane, default_check)
 			local proc = (pane:get_foreground_process_name() or ""):lower()
 			if proc:find("claude", 1, true) then
 				return true

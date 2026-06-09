@@ -20,6 +20,9 @@ common.apply(config, {
 	pane_is_shell = function(pane)
 		return not pane:is_alt_screen_active()
 	end,
+	should_run = function(pane, _default_check)
+		return not pane:is_alt_screen_active()
+	end,
 	keys = {
 		-- WSL is weird about ctrl+enter, so we have to send the escape sequence directly
 		-- (see copilot custom mapping in git.lua)  WSL: ConPTY strips <C-CR>, so WezTerm sends this explicit CSI-u sequence instead
