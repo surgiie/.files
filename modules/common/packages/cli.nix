@@ -9,6 +9,7 @@
     tree-sitter
     fd
     zsh-forgit
+    zsh-autosuggestions
     gcc
     gh
     krew

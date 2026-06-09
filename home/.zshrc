@@ -13,6 +13,7 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$PATH:$HOME/.npm/bin"
 export PATH="$PATH:$HOME/.local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
+export ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export KUBECOLOR_PAGING=auto
 export KUBECOLOR_PAGER="less -RF --quit-if-one-screen"
@@ -231,6 +232,7 @@ if [[ ! -d "$HOME/.oh-my-zsh/custom/plugins/fzf-tab" ]]; then
     git clone https://github.com/Aloxaf/fzf-tab "$HOME/.oh-my-zsh/custom/plugins/fzf-tab"
 fi
 source "$HOME/.oh-my-zsh/custom/plugins/fzf-tab/fzf-tab.plugin.zsh"
+source /run/current-system/sw/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 # -------------------------------------------------------------------------
 # Boot
