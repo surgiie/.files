@@ -1,0 +1,356 @@
+#!/usr/bin/env bash
+# gh:actions — browse GitHub Actions workflow runs filtered by status, open selection in browser
+#
+# USAGE:
+#   gh:actions [--status STATUS] [--org ORG] [--exclude PATTERN ...] [--include PATTERN ...]
+#              [--non-interactive] [--debug] [--help]
+#
+# FLAGS:
+#   --status STATUS       Workflow run status to filter by (default: failure)
+#                         Values: queued, in_progress, completed, success, failure,
+#                                 cancelled, skipped, timed_out, action_required, waiting
+#   --branch BRANCH       Branch to filter runs by (default: main)
+#   --org ORG             GitHub org (defaults to current repo's org, or GH_ORG env var)
+#   --exclude PATTERN     Glob-style repo name to exclude, e.g. "*.old" (repeatable)
+#   --include PATTERN     Glob-style repo name to include after exclusions (repeatable)
+#   --exclude-author USER Exclude runs triggered by this actor login (repeatable)
+#   --non-interactive     Print all run URLs to stdout and exit (no fzf)
+#   --cache               Reuse cached results (default TTL: 15m)
+#   --cache-ttl TTL       Override cache TTL (e.g. 5m, 1h, 30s). Implies --cache
+#   --debug               Print raw API responses for troubleshooting
+#   --help                Show this help
+#
+# DEPENDENCIES:
+#   gh (authenticated), fzf, jq
+
+set -euo pipefail
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+die()   { echo "❌  $*" >&2; exit 1; }
+info()  { [[ "$NON_INTERACTIVE" == "1" ]] && return; echo "ℹ️  $*" >&2; }
+debug() { [[ "$DEBUG" == "1" ]] && echo "🐛  $*" >&2 || true; }
+
+require() {
+    for cmd in "$@"; do
+        command -v "$cmd" &>/dev/null || die "'$cmd' is required but not found."
+    done
+}
+
+# ── arg parsing ───────────────────────────────────────────────────────────────
+
+STATUS="failure"
+BRANCH="main"
+ORG="${GH_ORG:-}"
+EXCLUDES=()
+INCLUDES=()
+EXCLUDE_AUTHORS=()
+NON_INTERACTIVE=0
+USE_CACHE=0
+CACHE_TTL="15m"
+DEBUG=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --status)       shift; STATUS="$1" ;;
+    --branch)       shift; BRANCH="$1" ;;
+    --org)          shift; ORG="$1" ;;
+    --exclude)        shift; EXCLUDES+=("$1") ;;
+    --include)        shift; INCLUDES+=("$1") ;;
+    --exclude-author) shift; EXCLUDE_AUTHORS+=("$1") ;;
+    --non-interactive) NON_INTERACTIVE=1 ;;
+    --cache)        USE_CACHE=1 ;;
+    --cache-ttl)    shift; CACHE_TTL="$1"; USE_CACHE=1 ;;
+    --debug)        DEBUG=1 ;;
+    --help | -h)
+        sed -n '/^# USAGE/,/^[^#]/{ /^[^#]/d; s/^# \{0,2\}//; p }' "$0"
+        exit 0
+        ;;
+    *) die "Unknown flag: $1. Try --help." ;;
+    esac
+    shift
+done
+
+require gh fzf jq
+
+# ── resolve org ───────────────────────────────────────────────────────────────
+
+if [[ -z "$ORG" ]]; then
+    ORG=$(gh repo view --json owner --jq '.owner.login' 2>/dev/null || true)
+fi
+[[ -n "$ORG" ]] || die "Could not determine org. Pass --org ORG or set GH_ORG env var."
+
+debug "Org: $ORG  |  Status: $STATUS"
+
+# ── fetch all repos in org ────────────────────────────────────────────────────
+
+fetch_repos() {
+    local page=1
+    local repos="[]"
+    while true; do
+        local batch
+        local raw
+        raw=$(gh api "orgs/${ORG}/repos?per_page=100&page=${page}" 2>/dev/null || echo "[]")
+        local raw_count
+        raw_count=$(echo "$raw" | jq 'length')
+        [[ "$raw_count" -eq 0 ]] && break
+        local batch
+        batch=$(echo "$raw" | jq '[.[] | select(.archived == false) | .name]')
+        repos=$(jq -s '.[0] + .[1]' <(echo "$repos") <(echo "$batch"))
+        [[ "$raw_count" -lt 100 ]] && break
+        page=$((page + 1))
+    done
+    echo "$repos"
+}
+
+# ── apply glob exclusions/inclusions ─────────────────────────────────────────
+
+apply_exclusions() {
+    local json="$1"
+    [[ ${#EXCLUDES[@]} -eq 0 && ${#INCLUDES[@]} -eq 0 ]] && { echo "$json"; return; }
+
+    local excludes_json includes_json
+    excludes_json=$(printf '%s\n' "${EXCLUDES[@]:-}" | jq -Rsc 'split("\n") | map(select(length>0))')
+    includes_json=$(printf '%s\n' "${INCLUDES[@]:-}" | jq -Rsc 'split("\n") | map(select(length>0))')
+
+    echo "$json" | jq \
+        --argjson excludes "$excludes_json" \
+        --argjson includes "$includes_json" '
+      def glob_match(name; patterns):
+        [ patterns[] | . as $pat |
+          if $pat == "*" then true
+          elif (startswith("*") and endswith("*")) then name | contains($pat[1:-1])
+          elif startswith("*") then name | endswith($pat[1:])
+          elif endswith("*") then name | startswith($pat[:-1])
+          else name == $pat
+          end
+        ] | any;
+      [ .[] |
+        . as $r | ($r.repo) as $name |
+        select(
+          (($excludes | length) == 0 or (glob_match($name; $excludes) | not)) or
+          (($includes | length) > 0 and glob_match($name; $includes))
+        )
+      ]
+    '
+}
+
+# ── filter repo list by exclude/include globs ────────────────────────────────
+
+filter_repos() {
+    local json="$1"
+    [[ ${#EXCLUDES[@]} -eq 0 && ${#INCLUDES[@]} -eq 0 ]] && { echo "$json"; return; }
+
+    local excludes_json includes_json
+    excludes_json=$(printf '%s\n' "${EXCLUDES[@]:-}" | jq -Rsc 'split("\n") | map(select(length>0))')
+    includes_json=$(printf '%s\n' "${INCLUDES[@]:-}" | jq -Rsc 'split("\n") | map(select(length>0))')
+
+    echo "$json" | jq \
+        --argjson excludes "$excludes_json" \
+        --argjson includes "$includes_json" '
+      def glob_match(name; patterns):
+        [ patterns[] | . as $pat |
+          if $pat == "*" then true
+          elif (startswith("*") and endswith("*")) then name | contains($pat[1:-1])
+          elif startswith("*") then name | endswith($pat[1:])
+          elif endswith("*") then name | startswith($pat[:-1])
+          else name == $pat
+          end
+        ] | any;
+      [ .[] | . as $name |
+        select(
+          (($excludes | length) == 0 or (glob_match($name; $excludes) | not)) or
+          (($includes | length) > 0 and glob_match($name; $includes))
+        )
+      ]
+    '
+}
+
+# ── fetch latest matching run per repo ───────────────────────────────────────
+
+fetch_runs() {
+    local repos_json="$1"
+    local all_runs="[]"
+    local total
+    total=$(echo "$repos_json" | jq 'length')
+    local i=0
+
+    while IFS= read -r repo; do
+        i=$((i + 1))
+        [[ -n "${SPIN_MSG_FILE:-}" ]] && printf "repo %d/%d: %s" "$i" "$total" "$repo" >"$SPIN_MSG_FILE"
+
+        # Fetch only the single latest run on the branch, include it only if it matches status.
+        local runs
+        runs=$(gh api "repos/${ORG}/${repo}/actions/runs?branch=${BRANCH}&per_page=1" \
+            --jq "
+                [ .workflow_runs[]
+                  | select((.conclusion // .status) == \"${STATUS}\")
+                  | {
+                      repo: \"${repo}\",
+                      repoFull: \"${ORG}/${repo}\",
+                      name: .name,
+                      branch: .head_branch,
+                      status: .status,
+                      conclusion: (.conclusion // \"in_progress\"),
+                      actor: .actor.login,
+                      createdAt: .created_at,
+                      updatedAt: .updated_at,
+                      url: .html_url,
+                      id: .id
+                    }
+                ]" 2>/dev/null || echo "[]")
+
+        local count
+        count=$(echo "$runs" | jq 'length')
+        debug "  $repo: $count matching latest run(s)"
+
+        if [[ "$count" -gt 0 ]]; then
+            all_runs=$(jq -s '.[0] + .[1]' <(echo "$all_runs") <(echo "$runs"))
+        fi
+    done < <(echo "$repos_json" | jq -r '.[]')
+
+    echo "$all_runs"
+}
+
+# ── main fetch ────────────────────────────────────────────────────────────────
+
+# ── cache helpers ─────────────────────────────────────────────────────────────
+
+ttl_to_seconds() {
+    local ttl="$1" num="${1%[smh]}"
+    case "$ttl" in
+        *h) echo $((num * 3600)) ;;
+        *m) echo $((num * 60)) ;;
+        *)  echo "$num" ;;
+    esac
+}
+
+cache_key() {
+    printf '%s|%s|%s|%s|%s' "$ORG" "$STATUS" "$BRANCH" "${EXCLUDES[*]:-}" "${INCLUDES[*]:-}" \
+        | md5sum | cut -d' ' -f1
+}
+
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/gh-actions"
+CACHE_FILE=""
+if [[ "$USE_CACHE" == "1" ]]; then
+    mkdir -p "$CACHE_DIR"
+    CACHE_FILE="$CACHE_DIR/$(cache_key).json"
+fi
+
+# ── main fetch ────────────────────────────────────────────────────────────────
+
+all_runs="[]"
+
+if [[ -n "$CACHE_FILE" && -f "$CACHE_FILE" ]]; then
+    ttl_secs=$(ttl_to_seconds "$CACHE_TTL")
+    age=$(( $(date +%s) - $(date -r "$CACHE_FILE" +%s) ))
+    if [[ "$age" -lt "$ttl_secs" ]]; then
+        info "Using cached results (${age}s old, TTL ${CACHE_TTL})"
+        all_runs=$(cat "$CACHE_FILE")
+    fi
+fi
+
+SPIN_MSG_FILE=$(mktemp)
+export SPIN_MSG_FILE
+printf "fetching repos..." >"$SPIN_MSG_FILE"
+
+spin() {
+    local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    local i=0
+    while true; do
+        local msg
+        msg=$(cat "$SPIN_MSG_FILE" 2>/dev/null)
+        printf "\r\033[K%s Fetching runs... %s" "${frames[$((i % 10))]}" "$msg" >&2
+        i=$((i + 1))
+        sleep 0.1
+    done
+}
+
+spin &
+SPIN_PID=$!
+trap 'kill "$SPIN_PID" 2>/dev/null; rm -f "$SPIN_MSG_FILE"; printf "\r\033[K" >&2' EXIT
+
+if [[ "$all_runs" == "[]" ]]; then
+    repos_json=$(fetch_repos)
+    repos_json=$(filter_repos "$repos_json")
+    all_runs=$(fetch_runs "$repos_json")
+    [[ -n "$CACHE_FILE" ]] && echo "$all_runs" >"$CACHE_FILE"
+fi
+
+kill "$SPIN_PID" 2>/dev/null
+rm -f "$SPIN_MSG_FILE"
+printf "\r\033[K" >&2
+
+# ── sort by updatedAt descending ──────────────────────────────────────────────
+
+all_runs=$(echo "$all_runs" | jq 'sort_by(.updatedAt) | reverse')
+
+# ── apply exclusions ──────────────────────────────────────────────────────────
+
+filtered_runs=$(apply_exclusions "$all_runs")
+
+if [[ ${#EXCLUDE_AUTHORS[@]} -gt 0 ]]; then
+    authors_json=$(printf '%s\n' "${EXCLUDE_AUTHORS[@]}" | sed 's/^@//' | jq -Rsc 'split("\n") | map(select(length>0))')
+    filtered_runs=$(echo "$filtered_runs" | jq --argjson authors "$authors_json" '[.[] | select(.actor as $a | $authors | any(. == $a) | not)]')
+fi
+raw_count=$(echo "$all_runs" | jq 'length')
+after_count=$(echo "$filtered_runs" | jq 'length')
+excluded=$((raw_count - after_count))
+[[ "$excluded" -gt 0 ]] && info "Excluded $excluded run(s) via --exclude patterns"
+
+if [[ "$after_count" -eq 0 ]]; then
+    echo "No workflow runs found with status: $STATUS" >&2
+    exit 0
+fi
+
+info "Org: $ORG  |  Status: $STATUS  |  Showing $after_count run(s)"
+
+# ── non-interactive mode ──────────────────────────────────────────────────────
+
+if [[ "$NON_INTERACTIVE" == "1" ]]; then
+    echo "$filtered_runs" | jq -r '.[].url'
+    exit 0
+fi
+
+# ── format for fzf ────────────────────────────────────────────────────────────
+
+format_runs() {
+    echo "$filtered_runs" | jq -r '
+      def trunc(s; n): if (s | length) > n then (s[0:n-1] + "…") else s end;
+      .[] |
+      (.updatedAt | split("T")[0]) as $date |
+      [
+        trunc(.repoFull; 40),
+        trunc(.name; 45),
+        trunc(.branch; 25),
+        trunc("@" + .actor; 20),
+        $date,
+        (.id | tostring)
+      ] | join("\t")
+    '
+}
+
+# ── fzf picker ────────────────────────────────────────────────────────────────
+
+selected=$(format_runs | awk -F'\t' '{printf "%-40s  %-45s  %-25s  %-20s  %-12s  %s\n", $1, $2, $3, $4, $5, $6}' | fzf \
+    --ansi \
+    --prompt="⚙️  Actions > " \
+    --header="$(printf '%-41s %-46s %-26s %-21s %-13s %s' 'REPO' 'WORKFLOW' 'BRANCH' 'ACTOR' 'DATE' 'RUN ID')" \
+    --preview="gh run view \$(echo {} | awk '{print \$NF}') --repo \$(echo {} | awk '{print \$1}') 2>/dev/null || echo 'no preview'" \
+    --preview-window="down:40%:wrap" \
+    --height=90% \
+    --layout=reverse \
+    --border=rounded \
+    --info=inline ||
+    true)
+
+[[ -n "$selected" ]] || { echo "No selection made."; exit 0; }
+
+# ── open in browser ───────────────────────────────────────────────────────────
+
+repo=$(echo "$selected" | awk '{print $1}')
+run_id=$(echo "$selected" | awk '{print $NF}')
+[[ -n "$repo" && -n "$run_id" ]] || die "Could not parse selection: $selected"
+
+info "Opening run $run_id for $repo..."
+GH_PAGER=cat gh run view "$run_id" --repo "$repo" --web
