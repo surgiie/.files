@@ -115,6 +115,7 @@ set("n", "<leader>k", "<C-w>k", opts({ desc = "Move to top split" }))
 set("n", "<leader>bn", "<cmd> enew <CR>", opts({ desc = "New buffer" }))
 set("n", "<leader>b", "<cmd>BufferLinePick<CR>", opts({ desc = "Pick buffer from bufferline" }))
 set("n", "<leader>bd", ":bdelete!<CR>", opts({ desc = "Delete buffer" }))
+set("n", "<leader>q", ":bdelete!<CR>", opts({ desc = "Delete buffer" }))
 -- -------------------------------------------------------------------------
 -- Comments
 -- -------------------------------------------------------------------------
