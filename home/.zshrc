@@ -14,6 +14,8 @@ export PATH="$PATH:$HOME/.npm/bin"
 export PATH="$PATH:$HOME/.local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
 export ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+export ZSH_AUTOSUGGEST_ACCEPT_WIDGETS=(forward-char end-of-line vi-forward-char vi-end-of-line)
+export ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS=(forward-word vi-forward-word vi-forward-word-end vi-forward-blank-word vi-forward-blank-word-end)
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export KUBECOLOR_PAGING=auto
 export KUBECOLOR_PAGER="less -RF --quit-if-one-screen"
@@ -245,3 +247,4 @@ if [ -f "$HOME/boot" ]; then
 fi
 
 bindkey '^_' undo
+bindkey '^[l' forward-word
