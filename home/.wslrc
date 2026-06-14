@@ -1,16 +1,13 @@
     cp $HOME/.files/home/.wezterm.common.lua /mnt/c/Users/surgiie/.wezterm.common.lua
     cp $HOME/.files/home/.wezterm.wsl.lua /mnt/c/Users/surgiie/.wezterm.lua
 
-    mkdir -p /mnt/c/Users/surgiie/AppData/Roaming/kanata
-    cp $HOME/.files/home/.config/kanata/kanata.kbd /mnt/c/Users/surgiie/AppData/Roaming/kanata/kanata.kbd
-
     mkdir -p /mnt/c/Users/surgiie/AppData/Roaming/wtq
     cp $HOME/.files/home/.config/wtq/wtq.jsonc /mnt/c/Users/surgiie/AppData/Roaming/wtq/wtq.jsonc
 
     mkdir -p /mnt/d/sounds/windwaker /mnt/d/sounds/kingdom-hearts
     cp $HOME/.files/sounds/windwaker/pause.mp3 /mnt/d/sounds/windwaker/pause.mp3
     cp $HOME/.files/sounds/windwaker/pause-close.mp3 /mnt/d/sounds/windwaker/pause-close.mp3
-     cp $HOME/.files/sounds/kingdom-hearts/pause.mp3 /mnt/d/sounds/kingdom-hearts/pause.mp3
+    cp $HOME/.files/sounds/kingdom-hearts/pause.mp3 /mnt/d/sounds/kingdom-hearts/pause.mp3
     cp $HOME/.files/sounds/kingdom-hearts/pause-close.mp3 /mnt/d/sounds/kingdom-hearts/pause-close.mp3
 
     # v2.2.0-pre2: first release with working Exclusive: "Never" support.
@@ -38,27 +35,11 @@
     tasklist=/mnt/c/Windows/System32/tasklist.exe
     powershell=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
 
-    if ! "$tasklist" 2>/dev/null | grep -qi "kanata.exe"; then
-        "$powershell" -Command 'Start-Process "D:\kanata\kanata.exe" -ArgumentList "--cfg", "$env:APPDATA\kanata\kanata.kbd" -Verb RunAs -WindowStyle Hidden'
+    # Skip Windows interop calls if the PE binfmt handler isn't registered.
+    if [ ! -e /proc/sys/fs/binfmt_misc/WSLInterop ] && [ ! -e /proc/sys/fs/binfmt_misc/WSLInterop-late ]; then
+        return
     fi
 
     if ! "$tasklist" 2>/dev/null | grep -qi "wtq.exe"; then
-        "$powershell" -Command 'Start-Process "D:\wtq\wtq.exe" -Verb RunAs -WindowStyle Hidden'
-    fi
-
-    if [ ! -f /mnt/d/kanata/kanata.exe ]; then
-        echo "kanata not found, downloading..."
-        mkdir -p /mnt/d/kanata
-        zip_url=$(curl -sf https://api.github.com/repos/jtroo/kanata/releases/latest \
-            | grep -o '"browser_download_url": "[^"]*windows-binaries-x64\.zip"' \
-            | grep -o 'https://[^"]*')
-        if [ -z "$zip_url" ]; then
-            echo "ERROR: could not resolve kanata download URL" >&2
-        else
-            tmp=$(mktemp /tmp/kanata-XXXX.zip)
-            curl -sL -o "$tmp" "$zip_url" \
-                && unzip -p "$tmp" kanata_windows_gui_winIOv2_x64.exe > /mnt/d/kanata/kanata.exe \
-                && echo "kanata downloaded to /mnt/d/kanata/kanata.exe"
-            rm -f "$tmp"
-        fi
+        "$powershell" -Command 'Start-Process "D:\wtq\wtq.exe" -Verb RunAs -WindowStyle Hidden' 2>/dev/null
     fi
