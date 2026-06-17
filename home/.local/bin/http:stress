@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set +m
+
+usage() {
+    echo "Usage: http:stress --url <url> --rate <n>"
+    exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --url) url="$2"; shift 2 ;;
+        --rate) max="$2"; shift 2 ;;
+        *) echo "Unknown option: $1"; usage ;;
+    esac
+done
+
+[[ -z "$url" || -z "$max" ]] && usage
+
+BOLD="\e[1m"
+RESET="\e[0m"
+GREEN="\e[32m"
+RED="\e[31m"
+DIM="\e[2m"
+
+printf "\n${BOLD}Started:${RESET} $(date)\n\n"
+printf " %-12s │ %-6s │ %s\n" "Time" "Status" "Response Time"
+printf "─%.0s" {1..14}; printf "┼"; printf "─%.0s" {1..8}; printf "┼"; printf "─%.0s" {1..14}; printf "\n"
+
+START=$(date +%s)
+total=0
+ok=0
+err=0
+tmpdir=$(mktemp -d)
+
+get() {
+    local url="$1"
+    local out
+    out=$(curl -sS \
+        -o /dev/null \
+        -w "%{http_code} %{time_total}" \
+        "$url" 2>/dev/null)
+
+    local code time
+    code=$(awk '{print $1}' <<< "$out")
+    time=$(awk '{printf "%.3fs", $2}' <<< "$out")
+
+    if [[ "$code" =~ ^2 ]]; then
+        color="$GREEN"
+        echo "ok" >> "$tmpdir/results"
+    else
+        color="$RED"
+        echo "err" >> "$tmpdir/results"
+    fi
+
+    printf " %-12s │ ${color}%-6s${RESET} │ %s\n" \
+        "$(date +'%H:%M:%S')" "$code" "$time"
+}
+
+while true; do
+    elapsed=$(($(date +%s) - START))
+    rm -f "$tmpdir/results"
+
+    for i in $(seq 1 "$max"); do
+        get "$url" &
+    done
+
+    wait
+
+    batch_ok=$(grep -c "^ok$" "$tmpdir/results" 2>/dev/null); batch_ok=${batch_ok:-0}
+    batch_err=$(grep -c "^err$" "$tmpdir/results" 2>/dev/null); batch_err=${batch_err:-0}
+    total=$((total + max))
+    ok=$((ok + batch_ok))
+    err=$((err + batch_err))
+
+    elapsed_fmt=$(printf "%02d:%02d" $((elapsed / 60)) $((elapsed % 60)))
+    printf "${DIM} ── %s elapsed ── %d sent, %d ok, %d err ──${RESET}\n" \
+        "$elapsed_fmt" "$total" "$ok" "$err"
+
+    sleep 1
+done
