@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+usage() {
+    echo "Usage: ssl:cert-info --host <host> --port <port>"
+    echo "Example: ssl:cert-info --host b-2.broker.example.kafka.us-east-2.amazonaws.com --port 9098"
+    exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --host)
+        host="$2"
+        shift 2
+        ;;
+    --port)
+        port="$2"
+        shift 2
+        ;;
+    *)
+        echo "Unknown option: $1"
+        usage
+        ;;
+    esac
+done
+
+[[ -z "$host" || -z "$port" ]] && usage
+
+openssl s_client -connect "$host:$port" -servername "$host" </dev/null 2>/dev/null |
+    openssl x509 -text -noout
