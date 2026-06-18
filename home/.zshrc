@@ -13,7 +13,8 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$PATH:$HOME/.npm/bin"
 export PATH="$PATH:$HOME/.local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
-export ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+
+export ZSH_AUTOSUGGEST_STRATEGY=(wordhistory history completion)
 export ZSH_AUTOSUGGEST_ACCEPT_WIDGETS=(forward-char end-of-line vi-forward-char vi-end-of-line)
 export ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS=(forward-word vi-forward-word vi-forward-word-end vi-forward-blank-word vi-forward-blank-word-end)
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
@@ -238,6 +239,15 @@ if [[ -f /run/current-system/sw/share/zsh-autosuggestions/zsh-autosuggestions.zs
 elif [[ -f /run/current-system/sw/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
     source /run/current-system/sw/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 fi
+
+_zsh_autosuggest_strategy_wordhistory() {
+    local prefix="$1"
+    local last_word="${prefix##* }"
+    [[ -z "$last_word" ]] && return
+    local match
+    match=$(fc -ln 1 | tr ' ' '\n' | grep -m1 "^${last_word}[^/]*$")
+    [[ -n "$match" ]] && suggestion="${prefix%$last_word}$match"
+}
 
 # -------------------------------------------------------------------------
 # Boot

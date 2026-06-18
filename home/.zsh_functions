@@ -135,6 +135,13 @@ kind-create() {
 
     kind create cluster --name "$name" "$@" || return 1
 
+    echo "=> patching CoreDNS to use real upstream DNS (avoids systemd-resolved 127.0.0.53 leaking in)"
+    kubectl get configmap coredns -n kube-system -o json \
+        | sed 's|forward \. /etc/resolv.conf|forward . 8.8.8.8 1.1.1.1|' \
+        | kubectl apply -f - || return 1
+    kubectl rollout restart deployment/coredns -n kube-system || return 1
+    kubectl rollout status deployment/coredns -n kube-system || return 1
+
     echo "=> installing metrics-server"
     kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml || return 1
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-kubectl logs "$@" | jq -Rr '
+"$@" 2>&1 | tr -d '\r' | jq -Rr --indent 2 '
   . as $line |
   ($line | index("{")) as $i |
   if $i == null then $line
