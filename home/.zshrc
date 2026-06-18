@@ -226,6 +226,14 @@ autoload -U +X bashcompinit && bashcompinit
 autoload -U +X compinit && compinit -i
 compdef _kubectl k kubecolor
 
+_json_pipe() {
+    local cmd="${words[2]}"
+    (( CURRENT-- ))
+    shift words
+    _normal
+}
+compdef _json_pipe json:pipe
+
 
 # -------------------------------------------------------------------------
 # fzf-tab (wraps all zsh completions with fzf, must come after compinit)

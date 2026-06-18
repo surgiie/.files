@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-"$@" 2>&1 | tr -d '\r' | jq -Rr --indent 2 '
+# pipe json strings through jq, while allowing non-json lines to pass through unchanged
+jq -Rr --indent 2 '
   . as $line |
   ($line | index("{")) as $i |
   if $i == null then $line
