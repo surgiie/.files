@@ -127,31 +127,6 @@ kctx() {
     [[ -n "$ctx" ]] && kubectl config use-context "$ctx"
 }
 
-# Create a kind cluster and install metrics-server with --kubelet-insecure-tls.
-# Usage: kind-create [name]
-kind-create() {
-    local name="${1:-kind}"
-    shift
-
-    kind create cluster --name "$name" "$@" || return 1
-
-    echo "=> patching CoreDNS to use real upstream DNS (avoids systemd-resolved 127.0.0.53 leaking in)"
-    kubectl get configmap coredns -n kube-system -o json \
-        | sed 's|forward \. /etc/resolv.conf|forward . 8.8.8.8 1.1.1.1|' \
-        | kubectl apply -f - || return 1
-    kubectl rollout restart deployment/coredns -n kube-system || return 1
-    kubectl rollout status deployment/coredns -n kube-system || return 1
-
-    echo "=> installing metrics-server"
-    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml || return 1
-
-    echo "=> patching metrics-server for kind (--kubelet-insecure-tls)"
-    kubectl patch deployment metrics-server -n kube-system --type=json \
-        -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]' || return 1
-
-    echo "=> done, cluster: $name"
-}
-
 # Open a nix-shell with a package at a specific version by searching nixpkgs commits.
 # Usage: nix-pkg-shell <package> [--version <version>]
 nix-pkg-shell() {

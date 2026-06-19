@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# kind:create — create a kind cluster with CoreDNS and metrics-server configured
+#
+# USAGE:
+#   kind:create [--name NAME] [-- KIND_FLAGS...]
+#
+# FLAGS:
+#   --name NAME   Cluster name (default: kind)
+#   --            Pass remaining args to `kind create cluster`
+
+set -euo pipefail
+
+name="kind"
+extra_args=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --name) shift; name="$1" ;;
+        --) shift; extra_args+=("$@"); break ;;
+        *) echo "Unknown flag: $1. Try --help." >&2; exit 1 ;;
+    esac
+    shift
+done
+
+kind create cluster --name "$name" "${extra_args[@]+"${extra_args[@]}"}"
+
+echo "=> stripping non-cluster search domains from kind node resolv.conf (avoids VPN/systemd-resolved search domains leaking into pods)"
+for node in $(kind get nodes --name "$name"); do
+    docker exec "$node" sh -c "grep -v '^search' /etc/resolv.conf > /tmp/resolv.new && cat /tmp/resolv.new > /etc/resolv.conf"
+done
+
+echo "=> patching CoreDNS to use real upstream DNS (avoids systemd-resolved 127.0.0.53 leaking in)"
+kubectl get configmap coredns -n kube-system -o json \
+    | sed 's|forward \. /etc/resolv.conf|forward . 8.8.8.8 1.1.1.1|' \
+    | kubectl apply -f -
+kubectl rollout restart deployment/coredns -n kube-system
+kubectl rollout status deployment/coredns -n kube-system
+
+echo "=> installing metrics-server"
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+echo "=> patching metrics-server for kind (--kubelet-insecure-tls)"
+kubectl patch deployment metrics-server -n kube-system --type=json \
+    -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
+echo "=> done, cluster: $name"
