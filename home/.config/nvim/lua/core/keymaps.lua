@@ -1,6 +1,5 @@
 -- -- Helpers
 -- -- -------------------------------------------------------------------------
---
 -- --- Merge provided options with default keymap options
 -- --- Default options: { noremap = true, silent = true }
 -- --- @param args table|nil Optional table of keymap options to merge with defaults
@@ -82,6 +81,13 @@ set("v", ">", ">gv", opts({ desc = "Indent line" }))
 --- Navigate to adjacent split or fallback to buffer navigation
 --- @param dir string Direction: "h" (left), "l" (right), "j" (down), "k" (up)
 local function navigate_buffer_or_split(dir)
+	pcall(function()
+		local manager = require("neo-tree.sources.manager")
+		local state = manager.get_state("filesystem")
+		if state and state.window and vim.api.nvim_win_is_valid(state.window.winid) then
+			vim.cmd("Neotree close")
+		end
+	end)
 	local before = vim.api.nvim_get_current_win()
 	vim.cmd("silent! wincmd " .. dir)
 	local after = vim.api.nvim_get_current_win()
