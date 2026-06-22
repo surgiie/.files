@@ -253,7 +253,7 @@ _zsh_autosuggest_strategy_wordhistory() {
     local last_word="${prefix##* }"
     [[ -z "$last_word" ]] && return
     local match
-    match=$(fc -ln 1 | tr ' ' '\n' | grep -m1 "^${last_word}[^/]*$")
+    match=$(fc -ln 1 | tr ' ' '\n' | grep "^${last_word}[^/]*$" | awk '{ if (length < min || min == 0) { min = length; best = $0 } } END { print best }')
     [[ -n "$match" ]] && suggestion="${prefix%$last_word}$match"
 }
 

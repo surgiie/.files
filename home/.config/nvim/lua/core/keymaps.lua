@@ -29,7 +29,6 @@ set("n", "q/", "<Nop>", opts({ desc = "Disable search history window" }))
 set("n", "q?", "<Nop>", opts({ desc = "Disable search history window" }))
 set("n", "K", "<Nop>", opts({ desc = "Disable man/help lookup" }))
 set({ "n", "i" }, "<F1>", "<Nop>", opts({ desc = "Disable help" }))
-set({ "v", "i" }, "<C-C>", "<Esc>", opts({ desc = "Escape with ctrl-c." }))
 -- -- -------------------------------------------------------------------------
 -- -- Deletion (route all deletes/changes to black hole register)
 -- -- -------------------------------------------------------------------------
@@ -50,7 +49,6 @@ set("n", "<S-u>", "<C-r>", { remap = true, silent = true, desc = "Redo" })
 -- -------------------------------------------------------------------------
 -- Saving
 -- -------------------------------------------------------------------------
-set({ "n", "i" }, "<C-s>", "<cmd> w <CR><ESC>", opts({ desc = "Save buffer file" }))
 -- -- -------------------------------------------------------------------------
 -- -- Search
 -- -- -------------------------------------------------------------------------
@@ -67,12 +65,6 @@ set("n", "vw", "viw", opts({ desc = "Select word under cursor" }))
 set("n", "va", function()
 	vim.cmd("normal! ggVG")
 end, opts({ desc = "Select all text" }))
--- -- -------------------------------------------------------------------------
--- -- Word Navigation (insert mode)
--- -- -------------------------------------------------------------------------
-set("i", "<C-b>", "<Esc>bi", opts({ desc = "Move backward by word in insert mode" }))
-set("i", "<C-w>", "<Esc>wa", opts({ desc = "Move forward by word in insert mode" }))
-set("i", "<C-S-a>", "<Esc>A", opts({ desc = "Move to end of line in insert mode" }))
 -- -- -------------------------------------------------------------------------
 -- -- Indentation
 -- -- -------------------------------------------------------------------------

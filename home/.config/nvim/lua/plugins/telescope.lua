@@ -168,6 +168,10 @@ return {
 			end
 			if entry.path or entry.filename then
 				vim.cmd("edit " .. vim.fn.fnameescape(entry.path or entry.filename))
+				if entry.lnum then
+					vim.api.nvim_win_set_cursor(0, { entry.lnum, entry.col or 0 })
+					vim.cmd("normal! zz")
+				end
 			end
 		end
 
