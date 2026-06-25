@@ -320,19 +320,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 })
 
 -- -------------------------------------------------------------------------
--- Autosave on Insert Leave
--- -------------------------------------------------------------------------
-vim.api.nvim_create_autocmd("InsertLeave", {
-	callback = function()
-		local bt = vim.bo.buftype
-		local ft = vim.bo.filetype
-		if bt == "" and ft ~= "" and vim.bo.modifiable and not vim.bo.readonly then
-			vim.cmd("silent! w")
-		end
-	end,
-})
-
--- -------------------------------------------------------------------------
 -- Neo-tree Win Separator
 -- -------------------------------------------------------------------------
 vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
