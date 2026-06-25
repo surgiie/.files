@@ -1,6 +1,9 @@
     cp $HOME/.files/home/.wezterm.common.lua /mnt/c/Users/surgiie/.wezterm.common.lua
     cp $HOME/.files/home/.wezterm.wsl.lua /mnt/c/Users/surgiie/.wezterm.lua
 
+    mkdir -p "/mnt/c/Users/surgiie/AppData/Local/Microsoft/PowerToys/Keyboard Manager"
+    cp "$HOME/.files/home/.config/powertoys/keyboard-manager/default.json" "/mnt/c/Users/surgiie/AppData/Local/Microsoft/PowerToys/Keyboard Manager/default.json"
+
     mkdir -p /mnt/c/Users/surgiie/AppData/Roaming/wtq
     cp $HOME/.files/home/.config/wtq/wtq.jsonc /mnt/c/Users/surgiie/AppData/Roaming/wtq/wtq.jsonc
 
