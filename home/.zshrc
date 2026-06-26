@@ -280,6 +280,8 @@ _zsh_autosuggest_strategy_wordhistory() {
 if [ -f "$HOME/boot" ]; then
     source "$HOME/boot"
 fi
-
+if [ -f "$HOME/.workrc" ]; then
+    source "$HOME/.workrc"
+fi
 bindkey '^_' undo
 bindkey '^[l' forward-word
