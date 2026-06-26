@@ -14,6 +14,7 @@ return {
 	},
 	{
 		"akinsho/git-conflict.nvim",
+		opts = {},
 	},
 	{
 		"f-person/git-blame.nvim",

@@ -77,7 +77,7 @@ updateRefs = false
 
 [merge]
   tool = nvimdiff
-  conflictStyle = zdiff3
+  conflictStyle = diff3
 
 [mergetool]
   keepBackup = false

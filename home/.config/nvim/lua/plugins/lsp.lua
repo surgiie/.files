@@ -13,7 +13,7 @@ return {
 					return { buffer = ev.buf, silent = true, desc = desc }
 				end
 
-				vim.keymap.set({ "n", "v" }, "c", vim.lsp.buf.code_action, opts("Code actions"))
+				vim.keymap.set({ "n", "v" }, "ca", vim.lsp.buf.code_action, opts("Code actions"))
 				vim.keymap.set("n", ".", "<cmd>Telescope lsp_definitions<CR>", opts("LSP definitions"))
 				vim.keymap.set("n", "cr", vim.lsp.buf.rename, opts("Rename symbol"))
 				vim.keymap.set("n", "?", function()
