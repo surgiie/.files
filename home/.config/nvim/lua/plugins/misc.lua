@@ -89,9 +89,13 @@ return {
 		"github/copilot.vim",
 		config = function()
 			vim.g.copilot_no_tab_map = true
-			vim.api.nvim_set_keymap("i", "<C-CR>", 'copilot#Accept("<CR>")', { expr = true, silent = true })
+			vim.g.copilot_assume_mapped = true
+			vim.api.nvim_set_keymap("i", "<C-CR>", 'copilot#Accept("<CR>")', { expr = true, silent = true, noremap = false })
 			-- WSL: ConPTY strips <C-CR>, so WezTerm sends this explicit CSI-u sequence instead
-			vim.api.nvim_set_keymap("i", "<Esc>[13;5u", 'copilot#Accept("<CR>")', { expr = true, silent = true })
+			vim.api.nvim_set_keymap("i", "<Esc>[13;5u", 'copilot#Accept("<CR>")', { expr = true, silent = true, noremap = false })
+			vim.keymap.set("i", "<M-Right>", "<Plug>(copilot-accept-word)")
+			-- zsh bindkey '^[l' (forward-word) means Alt-Right arrives as \el, so map raw sequence too
+			vim.keymap.set("i", "<Esc>l", "<Plug>(copilot-accept-word)")
 		end,
 	},
 

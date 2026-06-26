@@ -14,7 +14,7 @@ export PATH="$PATH:$HOME/.npm/bin"
 export PATH="$PATH:$HOME/.local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
 
-export ZSH_AUTOSUGGEST_STRATEGY=(wordhistory history completion)
+export ZSH_AUTOSUGGEST_STRATEGY=(smart)
 export ZSH_AUTOSUGGEST_ACCEPT_WIDGETS=(forward-char end-of-line vi-forward-char vi-end-of-line)
 export ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS=(forward-word vi-forward-word vi-forward-word-end vi-forward-blank-word vi-forward-blank-word-end)
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
@@ -247,6 +247,23 @@ if [[ -f /run/current-system/sw/share/zsh-autosuggestions/zsh-autosuggestions.zs
 elif [[ -f /run/current-system/sw/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
     source /run/current-system/sw/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 fi
+
+_zsh_autosuggest_strategy_smart() {
+    local last_word="${1##* }"
+    if [[ "$1" == *' ' ]]; then
+        _zsh_autosuggest_strategy_history "$1"
+        [[ -n "$suggestion" ]] && return
+        _zsh_autosuggest_strategy_completion "$1"
+    elif [[ "$last_word" == -* ]]; then
+        _zsh_autosuggest_strategy_completion "$1"
+        [[ -n "$suggestion" ]] && return
+        _zsh_autosuggest_strategy_history "$1"
+    else
+        _zsh_autosuggest_strategy_wordhistory "$1"
+        [[ -n "$suggestion" ]] && return
+        _zsh_autosuggest_strategy_history "$1"
+    fi
+}
 
 _zsh_autosuggest_strategy_wordhistory() {
     local prefix="$1"
