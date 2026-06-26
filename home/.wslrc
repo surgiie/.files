@@ -4,6 +4,9 @@
     mkdir -p "/mnt/c/Users/surgiie/AppData/Local/Microsoft/PowerToys/Keyboard Manager"
     cp "$HOME/.files/home/.config/powertoys/keyboard-manager/default.json" "/mnt/c/Users/surgiie/AppData/Local/Microsoft/PowerToys/Keyboard Manager/default.json"
 
+    mkdir -p /mnt/c/Users/surgiie/AppData/Local/Mouseless/configs
+    cp "$HOME/.files/home/.config/mouseless/config.yaml" /mnt/c/Users/surgiie/AppData/Local/Mouseless/configs/config.yaml
+
     mkdir -p /mnt/c/Users/surgiie/AppData/Roaming/wtq
     cp $HOME/.files/home/.config/wtq/wtq.jsonc /mnt/c/Users/surgiie/AppData/Roaming/wtq/wtq.jsonc
 
