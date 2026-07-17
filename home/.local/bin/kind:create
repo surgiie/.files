@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# kind:create — create a kind cluster with CoreDNS and metrics-server configured
+# kind:create — create a kind cluster with clean DNS and metrics-server configured
 #
 # USAGE:
 #   kind:create [--name NAME] [-- KIND_FLAGS...]
@@ -22,17 +22,58 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-kind create cluster --name "$name" "${extra_args[@]+"${extra_args[@]}"}"
+config=$(mktemp /tmp/kind-config-XXXXXX.yaml)
+trap 'rm -f "$config"' EXIT
 
-echo "=> stripping non-cluster search domains from kind node resolv.conf (avoids VPN/systemd-resolved search domains leaking into pods)"
-for node in $(kind get nodes --name "$name"); do
-    docker exec "$node" sh -c "grep -v '^search' /etc/resolv.conf > /tmp/resolv.new && cat /tmp/resolv.new > /etc/resolv.conf"
-done
+cat > "$config" <<'EOF'
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  dnsSearch: []
+kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    dns:
+      imageRepository: registry.k8s.io
+  - |
+    kind: KubeletConfiguration
+    clusterDNS:
+      - 10.96.0.10
+EOF
 
-echo "=> patching CoreDNS to use real upstream DNS (avoids systemd-resolved 127.0.0.53 leaking in)"
-kubectl get configmap coredns -n kube-system -o json \
-    | sed 's|forward \. /etc/resolv.conf|forward . 8.8.8.8 1.1.1.1|' \
-    | kubectl apply -f -
+echo "=> creating kind cluster: $name"
+kind create cluster --name "$name" --config "$config" "${extra_args[@]+"${extra_args[@]}"}"
+
+echo "=> patching CoreDNS to forward to public DNS"
+kubectl get configmap coredns -n kube-system -o json | python3 -c "
+import json, sys
+cm = json.load(sys.stdin)
+cm['data']['Corefile'] = '''.:53 {
+    errors
+    health {
+       lameduck 5s
+    }
+    ready
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+       pods insecure
+       fallthrough in-addr.arpa ip6.arpa
+       ttl 30
+    }
+    prometheus :9153
+    forward . 8.8.8.8 1.1.1.1 {
+       max_concurrent 1000
+    }
+    cache 30 {
+       disable success cluster.local
+       disable denial cluster.local
+    }
+    loop
+    reload
+    loadbalance
+}
+'''
+print(json.dumps(cm))
+" | kubectl apply -f -
 kubectl rollout restart deployment/coredns -n kube-system
 kubectl rollout status deployment/coredns -n kube-system
 

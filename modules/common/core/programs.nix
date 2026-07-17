@@ -1,6 +1,38 @@
 { pkgs, ... }:
 
 {
+  programs.nix-ld = {
+    enable = true;
+    libraries = with pkgs; [
+      stdenv.cc.cc.lib
+      zlib
+      # Playwright Chromium dependencies
+      glib
+      nss
+      nspr
+      dbus
+      atk
+      at-spi2-atk
+      cups
+      libdrm
+      expat
+      libxcb
+      libX11
+      libXcomposite
+      libXdamage
+      libXext
+      libXfixes
+      libXrandr
+      libxkbcommon
+      mesa
+      libgbm
+      alsa-lib
+      pango
+      cairo
+      udev
+    ];
+  };
+
   programs.firefox.enable = true;
 
   programs.hyprland = {
