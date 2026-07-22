@@ -225,8 +225,8 @@ function M.apply(config, opts)
 	end
 
 	-- ── Vim modes (normal/insert/shortcuts) + status bar ─────────────────────
-	-- local vim_modes = wezterm.plugin.require("https://github.com/surgiie/wezterm-modes")
-	local vim_modes = dofile(wezterm.home_dir .. "/projects/wezterm-modes/plugin/init.lua")
+	local vim_modes = wezterm.plugin.require("https://github.com/surgiie/wezterm-modes")
+	-- local vim_modes = dofile(wezterm.home_dir .. "/projects/wezterm-modes/plugin/init.lua")
 	local commands = opts.commands
 		or {
 			-- ── Git ───────────────────────────────────────────────────────────────
