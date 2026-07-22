@@ -225,8 +225,8 @@ function M.apply(config, opts)
 	end
 
 	-- ── Vim modes (normal/insert/shortcuts) + status bar ─────────────────────
-	local vim_modes = wezterm.plugin.require("https://github.com/surgiie/wezterm-modes")
-	-- local vim_modes = dofile(wezterm.home_dir .. "/projects/wezterm-modes/plugin/init.lua")
+	-- local vim_modes = wezterm.plugin.require("https://github.com/surgiie/wezterm-modes")
+	local vim_modes = dofile(wezterm.home_dir .. "/projects/wezterm-modes/plugin/init.lua")
 	local commands = opts.commands
 		or {
 			-- ── Git ───────────────────────────────────────────────────────────────
@@ -294,18 +294,6 @@ function M.apply(config, opts)
 				command = "browse 'https://www.google.com/search?q=<cursor>'",
 			},
 			{ key = "bg", description = "Browser — Open current git repo", command = "git browse" },
-
-			-- ── History ───────────────────────────────────────────────────────────
-			{
-				key = "hr",
-				description = "History — Search and run from history",
-				command = [=[cmd=$(grep -a '^: [0-9]*:[0-9]*;' ~/.zsh_history | strings | awk -F';' '{ $1=""; print substr($0,2) }' | tac | awk '!seen[$0]++' | fzf --prompt='history> ' --height=~40% --layout=reverse --border --no-sort) && [[ -n "$cmd" ]] && eval "$cmd"]=],
-			},
-			{
-				key = "he",
-				description = "History — Open history file in editor",
-				command = "${EDITOR:-nvim} ~/.zsh_history",
-			},
 
 			-- ── Kubectl ───────────────────────────────────────────────────────────
 			{ key = "kn", description = "Kubectl — Switch namespace", command = "kns" },
