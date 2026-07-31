@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-## ---------------------------------------------------------------------------------------
-## nixos-sync - rebuilds my nixos configuration and optionally cleans up old generations
-## ---------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# nixos-sync - rebuilds nixos config and optionally cleans up old generations
+# -------------------------------------------------------------------------
 
 if [ ! -f "$HOME/nixos-host" ]; then
     echo "❌ ERROR: Please write your nixos host name to $HOME/nixos-host" >&2

@@ -4,9 +4,7 @@ local exec = vars.exec
 local menu = vars.menu
 local sounds = vars.sounds
 
--- -------------------------------------------------------------------------
--- Apps
--- -------------------------------------------------------------------------
+-- ── Apps ──────────────────────────────────────────────────────────────────────
 hl.bind(
 	mainMod .. " + T",
 	exec(
@@ -36,9 +34,7 @@ hl.bind(
 hl.bind(mainMod .. " + A", exec(menu))
 hl.bind(mainMod .. " + V", exec("nvim-scratch"))
 
--- -------------------------------------------------------------------------
--- Windows
--- -------------------------------------------------------------------------
+-- ── Windows ───────────────────────────────────────────────────────────────────
 hl.bind(mainMod .. " + backspace", function()
 	if hl.get_last_window() == nil then
 		return
@@ -53,25 +49,19 @@ hl.bind(mainMod .. " + Q", exec("hyprclose"))
 hl.bind(mainMod .. " + Tab", exec("hyprselect"))
 hl.bind("ALT + Tab", exec("hyprselect"))
 
--- -------------------------------------------------------------------------
--- Focus
--- -------------------------------------------------------------------------
+-- ── Focus ─────────────────────────────────────────────────────────────────────
 hl.bind(mainMod .. " + H", hl.dsp.focus({ direction = "left" }))
 hl.bind(mainMod .. " + L", hl.dsp.focus({ direction = "right" }))
 hl.bind(mainMod .. " + J", hl.dsp.focus({ direction = "down" }))
 hl.bind(mainMod .. " + K", hl.dsp.focus({ direction = "up" }))
 
--- -------------------------------------------------------------------------
--- Move Windows
--- -------------------------------------------------------------------------
+-- ── Move Windows ──────────────────────────────────────────────────────────────
 hl.bind(mainMod .. " + SHIFT + H", hl.dsp.window.move({ direction = "l" }))
 hl.bind(mainMod .. " + SHIFT + L", hl.dsp.window.move({ direction = "r" }))
 hl.bind(mainMod .. " + SHIFT + J", hl.dsp.window.move({ direction = "d" }))
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.window.move({ direction = "u" }))
 
--- -------------------------------------------------------------------------
--- Workspaces
--- -------------------------------------------------------------------------
+-- ── Workspaces ────────────────────────────────────────────────────────────────
 for i = 1, 9 do
 	hl.bind(mainMod .. " + " .. i, hl.dsp.focus({ workspace = i }))
 	hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.window.move({ workspace = i }))
@@ -79,9 +69,7 @@ end
 hl.bind(mainMod .. " + 0", hl.dsp.focus({ workspace = 10 }))
 hl.bind(mainMod .. " + SHIFT + 0", hl.dsp.window.move({ workspace = 10 }))
 
--- -------------------------------------------------------------------------
--- Mouse Pointer
--- -------------------------------------------------------------------------
+-- ── Mouse Pointer ─────────────────────────────────────────────────────────────
 hl.bind(
 	mainMod .. " + M",
 	exec(
@@ -102,9 +90,7 @@ hl.define_submap("cursor", "none", function()
 end)
 hl.bind(mainMod .. " + C", hl.dsp.submap("cursor"))
 
--- -------------------------------------------------------------------------
--- Misc
--- -------------------------------------------------------------------------
+-- ── Misc ──────────────────────────────────────────────────────────────────────
 hl.bind(
 	mainMod .. " + S",
 	exec("hyprshot -m region --clipboard-only && pgrep -x wl-kbptr > /dev/null && pkill -x wl-kbptr")

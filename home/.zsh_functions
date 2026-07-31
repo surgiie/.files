@@ -1,5 +1,15 @@
+# -------------------------------------------------------------------------
+# Output / Prompts
+# -------------------------------------------------------------------------
+
 # Print text in yellow bold.
 yellow_bold() { printf "\e[1;33m%b\e[0m" "$*"; }
+
+# Print a warning message to stderr.
+warn()    { printf "⚠️ WARN: %s\n"    "$*" >&2; }
+
+# Print an error message to stderr.
+error()   { printf "❌ ERROR: %s\n"   "$*" >&2; }
 
 # Prompt the user for confirmation before proceeding.
 # Usage: confirm [message]
@@ -23,11 +33,9 @@ ask_secret() {
     echo "$input"
 }
 
-# Print a warning message to stderr.
-warn()    { printf "⚠️ WARN: %s\n"    "$*" >&2; }
-
-# Print an error message to stderr.
-error()   { printf "❌ ERROR: %s\n"   "$*" >&2; }
+# -------------------------------------------------------------------------
+# Shell Utilities
+# -------------------------------------------------------------------------
 
 # Export an environment variable without saving it to shell history.
 # Usage: putenv VAR VALUE
@@ -40,6 +48,10 @@ putenv() {
     export "$1=$2"
     fc -P
 }
+
+# -------------------------------------------------------------------------
+# Package Linking
+# -------------------------------------------------------------------------
 
 # Link a local Composer package into the current project via a path repository.
 # Usage: composer-link <package_path>
@@ -99,6 +111,10 @@ npm-link() {
     npm link "$package_name"
 }
 
+# -------------------------------------------------------------------------
+# System
+# -------------------------------------------------------------------------
+
 # Run the ~/shutdown script if it exists, then shut down the system.
 bye(){
     if [ -f "$HOME/shutdown" ]; then
@@ -112,6 +128,9 @@ virtualenv_make(){
     python -m venv .venv --copies
 }
 
+# -------------------------------------------------------------------------
+# Kubectl
+# -------------------------------------------------------------------------
 
 # Switch kubectl namespace interactively via fzf.
 kns() {
@@ -126,6 +145,10 @@ kctx() {
     ctx=$(kubectl config get-contexts --no-headers -o name | fzf --prompt='context> ')
     [[ -n "$ctx" ]] && kubectl config use-context "$ctx"
 }
+
+# -------------------------------------------------------------------------
+# Nix
+# -------------------------------------------------------------------------
 
 # Open a nix-shell with a package at a specific version by searching nixpkgs commits.
 # Usage: nix-pkg-shell <package> [--version <version>]
@@ -171,6 +194,10 @@ nix-pkg-shell() {
     echo "=> nix-shell with ${pkg}${version:+ @ ${version}} (commit: ${commit})"
     IN_NIX_SHELL=1 NIX_PKG="${pkg}${version:+@${version}}" nix shell "github:NixOS/nixpkgs/${commit}#${pkg}"
 }
+
+# -------------------------------------------------------------------------
+# GitHub
+# -------------------------------------------------------------------------
 
 # Delete GitHub Actions runs for a workflow on a branch, with fzf workflow selection.
 # Usage: gh-delete-runs [branch]  (defaults to current git branch)

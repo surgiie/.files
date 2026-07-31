@@ -93,10 +93,6 @@ if [ ! -f "$HOME/.local/bin/hyprtoggle" ]; then
     chmod +x "$HOME/.local/bin/hyprtoggle"
 fi
 
-if command -v xdg-settings &>/dev/null; then
-    xdg-settings set default-web-browser browse.desktop
-fi
-
 if [ ! -d "$HOME/.config/fuzzel/catppuccin" ]; then
     mkdir -p "$HOME/.config/fuzzel"
     git clone https://github.com/catppuccin/fuzzel.git /tmp/catppuccin-fuzzel

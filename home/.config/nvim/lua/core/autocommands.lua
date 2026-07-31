@@ -1,6 +1,4 @@
--- -------------------------------------------------------------------------
--- Bufferline Colors
--- -------------------------------------------------------------------------
+-- ── Bufferline Colors ─────────────────────────────────────────────────────────
 local BUFFER_LINE_COLORS = {
 	fill = "#212121",
 	inactive_bg = "#212121",
@@ -12,9 +10,7 @@ local BUFFER_LINE_COLORS = {
 	modified = "#212121",
 }
 
--- -------------------------------------------------------------------------
--- Devicon Highlights
--- -------------------------------------------------------------------------
+-- ── Devicon Highlights ────────────────────────────────────────────────────────
 local function apply_devicon_highlights()
 	local hl = vim.api.nvim_set_hl
 	for _, name in ipairs(vim.fn.getcompletion("BufferLineDevIcon", "highlight")) do
@@ -33,17 +29,13 @@ vim.api.nvim_create_autocmd({ "VimEnter", "BufEnter", "BufAdd" }, {
 	end,
 })
 
--- -------------------------------------------------------------------------
--- ColorScheme Highlights
--- -------------------------------------------------------------------------
+-- ── ColorScheme Highlights ────────────────────────────────────────────────────
 vim.api.nvim_create_autocmd("ColorScheme", {
 	pattern = "*",
 	callback = function()
 		local hl = vim.api.nvim_set_hl
 
-		-- -------------------------------------------------------------------------
-		-- Transparency
-		-- -------------------------------------------------------------------------
+		-- ── Transparency ─────────────────────────────────────────────────────────
 		hl(0, "Scope", { bg = "NONE" })
 		hl(0, "Normal", { bg = "NONE" })
 		hl(0, "FloatBorder", { bg = "NONE" })
@@ -58,16 +50,12 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 		hl(0, "WinSeparator", { bg = "NONE" })
 		hl(0, "EndOfBuffer", { bg = "NONE" })
 
-		-- -------------------------------------------------------------------------
-		-- Popup / Completion Menu
-		-- -------------------------------------------------------------------------
+		-- ── Popup / Completion Menu ───────────────────────────────────────────────
 		hl(0, "Pmenu", { bg = "NONE" })
 		hl(0, "PmenuSbar", { bg = "NONE" })
 		hl(0, "PmenuThumb", { bg = "NONE" })
 
-		-- -------------------------------------------------------------------------
-		-- UI Elements
-		-- -------------------------------------------------------------------------
+		-- ── UI Elements ───────────────────────────────────────────────────────────
 		hl(0, "CursorLine", { bg = "#131421" })
 		hl(0, "Comment", { fg = "#ababab" })
 		hl(0, "@comment", { link = "Comment" })
@@ -76,9 +64,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 		hl(0, "Visual", { bg = "#1f2233" })
 		hl(0, "WinSeparator", { fg = "#1e1e1e", bg = "NONE" })
 
-		-- -------------------------------------------------------------------------
-		-- Trouble
-		-- -------------------------------------------------------------------------
+		-- ── Trouble ───────────────────────────────────────────────────────────────
 		hl(0, "TroubleNormal", { bg = "NONE" })
 		hl(0, "TroubleNormalNC", { bg = "NONE" })
 		hl(0, "TroubleText", { fg = "#e6e6e6" })
@@ -87,22 +73,16 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 		hl(0, "TroubleIconWarning", { fg = "#ff9700" })
 		hl(0, "TroubleIconHint", { fg = "#a4e400" })
 		hl(0, "TroubleIconInfo", { fg = "#62d8f1" })
-		-- -------------------------------------------------------------------------
-		-- Noice
-		-- -------------------------------------------------------------------------
+		-- ── Noice ─────────────────────────────────────────────────────────────────
 		hl(0, "NoiceCmdlinePopupBorder", { fg = "#ffffff", bg = "NONE" })
 		hl(0, "NoiceCmdlinePopupTitle", { fg = "#ffffff", bg = "NONE" })
 		hl(0, "NoiceConfirmBorder", { fg = "#ffffff", bg = "NONE" })
 		hl(0, "NoiceCmdlineIcon", { fg = "#ffffff", bg = "NONE" })
-		-- -------------------------------------------------------------------------
-		-- Snacks
-		-- -------------------------------------------------------------------------
+		-- ── Snacks ────────────────────────────────────────────────────────────────
 		hl(0, "SnacksPicker", { bg = "none", nocombine = true })
 		hl(0, "SnacksPickerBorder", { fg = "#62d8f1", bg = "none", nocombine = true })
 
-		-- -------------------------------------------------------------------------
-		-- Neo-tree
-		-- -------------------------------------------------------------------------
+		-- ── Neo-tree ──────────────────────────────────────────────────────────────
 		hl(0, "NeoTreeCursorLine", { bg = "#1f2233" })
 		hl(0, "NeoTreeNormal", { bg = "NONE" })
 		hl(0, "NeoTreeNormalNC", { bg = "NONE" })
@@ -110,42 +90,32 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 		hl(0, "NeoTreeFloatBorder", { bg = "NONE" })
 		hl(0, "NeoTreeWinSeparator", { fg = "NONE", bg = BUFFER_LINE_COLORS.inactive_bg })
 
-		-- -------------------------------------------------------------------------
-		-- Telescope
-		-- -------------------------------------------------------------------------
+		-- ── Telescope ─────────────────────────────────────────────────────────────
 		hl(0, "TelescopeNormal", { bg = "NONE" })
 		hl(0, "Telescope", { bg = "NONE" })
 		hl(0, "TelescopeBorder", { bg = "NONE" })
 		hl(0, "TelescopePromptBorder", { bg = "NONE", fg = "NONE" })
 		hl(0, "TelescopePromptTitle", { bg = "NONE", fg = "NONE" })
 
-		-- -------------------------------------------------------------------------
-		-- LSP Diagnostics
-		-- -------------------------------------------------------------------------
+		-- ── LSP Diagnostics ───────────────────────────────────────────────────────
 		hl(0, "DiagnosticVirtualTextWarn", { fg = "#F2B91F", bg = "NONE" })
 		hl(0, "DiagnosticVirtualTextHint", { bg = "NONE", fg = "#1FF25E" })
 		hl(0, "DiagnosticVirtualTextOk", { bg = "NONE" })
 		hl(0, "DiagnosticVirtualTextError", { bg = "NONE", fg = "#F21F3C" })
 		hl(0, "DiagnosticVirtualTextInfo", { bg = "NONE", fg = "#1FC7F2" })
-		-- -------------------------------------------------------------------------
-		-- Lazy
-		-- -------------------------------------------------------------------------
+		-- ── Lazy ──────────────────────────────────────────────────────────────────
 		hl(0, "LazyNormal", { bg = "NONE" })
 		hl(0, "LazyH1", { bg = "#e2e2e2", fg = "#212121", bold = true })
 		hl(0, "LazyButton", { bg = "#2a2a2a", fg = "#9a9a9a" })
 		hl(0, "LazyButtonActive", { bg = "#e2e2e2", fg = "#212121", bold = true })
 		hl(0, "LazyH2", { fg = "#e2e2e2", bold = true })
 		hl(0, "LazySpecial", { fg = "#e2e2e2" })
-		-- -------------------------------------------------------------------------
-		-- Dashboard
-		-- -------------------------------------------------------------------------
+		-- ── Dashboard ─────────────────────────────────────────────────────────────
 		hl(0, "DashboardHeader", { fg = "#ffffff" })
 		hl(0, "DashboardCenter", { fg = "#f8f8f2" })
 		hl(0, "DashboardShortcut", { fg = "#bd93f9" })
 		hl(0, "DashboardFooter", { fg = "#ffffff" })
-		-- -------------------------------------------------------------------------
-		-- Bufferline
-		-- -------------------------------------------------------------------------
+		-- ── Bufferline ────────────────────────────────────────────────────────────
 		hl(0, "BufferLineFill", { bg = "NONE" })
 		hl(0, "BufferLineOffsetSeparator", { fg = BUFFER_LINE_COLORS.inactive_bg, bg = BUFFER_LINE_COLORS.inactive_bg })
 		hl(0, "TabLineFill", { bg = BUFFER_LINE_COLORS.fill })
@@ -187,9 +157,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 	end,
 })
 
--- -------------------------------------------------------------------------
--- Markdown Highlights
--- -------------------------------------------------------------------------
+-- ── Markdown Highlights ───────────────────────────────────────────────────────
 vim.api.nvim_create_autocmd("FileType", {
 	pattern = "markdown",
 	callback = function()
@@ -206,9 +174,7 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
--- -------------------------------------------------------------------------
--- Yank Highlight
--- -------------------------------------------------------------------------
+-- ── Yank Highlight ────────────────────────────────────────────────────────────
 vim.api.nvim_create_autocmd("TextYankPost", {
 	desc = "Highlight when yanking (copying) text",
 	group = vim.api.nvim_create_augroup("highlight-yank", { clear = true }),
@@ -217,9 +183,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	end,
 })
 
--- -------------------------------------------------------------------------
--- Tiltfile Filetype Detection
--- -------------------------------------------------------------------------
+-- ── Tiltfile Filetype Detection ───────────────────────────────────────────────
 vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 	pattern = { "Tiltfile", "*.tilt", "*.Tiltfile", "*.tiltfile" },
 	callback = function()
@@ -227,9 +191,7 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 	end,
 })
 
--- -------------------------------------------------------------------------
--- Shebang Filetype Detection
--- -------------------------------------------------------------------------
+-- ── Shebang Filetype Detection ────────────────────────────────────────────────
 local SHEBANG_FILETYPES = {
 	bash = "sh",
 	zsh = "zsh",
@@ -255,17 +217,13 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 	end,
 })
 
--- -------------------------------------------------------------------------
--- Trim Trailing Whitespace
--- -------------------------------------------------------------------------
+-- ── Trim Trailing Whitespace ──────────────────────────────────────────────────
 vim.api.nvim_create_autocmd("BufWritePre", {
 	pattern = "*",
 	command = "%s/\\s\\+$//e",
 })
 
--- -------------------------------------------------------------------------
--- Cursorline
--- -------------------------------------------------------------------------
+-- ── Cursorline ────────────────────────────────────────────────────────────────
 local custom_group = vim.api.nvim_create_augroup("CustomBufWinEnter", { clear = true })
 
 vim.api.nvim_create_autocmd({ "InsertEnter", "InsertLeave" }, {
@@ -319,9 +277,7 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 	end,
 })
 
--- -------------------------------------------------------------------------
--- Neo-tree Win Separator
--- -------------------------------------------------------------------------
+-- ── Neo-tree Win Separator ────────────────────────────────────────────────────
 vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
 	group = custom_group,
 	callback = function()
