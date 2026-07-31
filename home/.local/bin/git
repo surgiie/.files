@@ -3,11 +3,15 @@
 # git - wrapper around git that adds custom subcommands.
 #
 # Custom subcommands:
-#   recent   - list remote branches sorted by most recent commit date
-#   rewrite  - interactive rebase from divergence point of parent branch
-#   compare  - open GitHub compare/PR view for current branch in browser
-#   browse   - open GitHub tree view for current branch in browser
-#   add      - proxy to forgit add when no paths given
+#   recent      - list remote branches sorted by most recent commit date
+#   rebase      - fzf-select a commit to interactively rebase from, or proxy to native git rebase
+#   compare     - open GitHub compare/PR view for current branch in browser
+#   browse      - open GitHub tree view for current branch in browser
+#   add         - proxy to forgit add when no paths given
+#   wip         - stage all, commit as wip with a message, and push
+#   switch      - fzf-select a branch and switch to it
+#   cherry-pick - fzf-select a commit from log and cherry-pick it
+#   restore     - fzf-select a file and a ref, then restore the file
 # -----------------------------------------------------------------------
 
 # Find the real git binary (skip this script itself)
@@ -22,10 +26,14 @@ case "$1" in
 recent)
     $_GIT branch -r --sort=-committerdate --format="%(committerdate:relative)%09%(refname:short)"
     ;;
-rewrite)
-    base=$($_GIT log --oneline --decorate | fzf --prompt="rebase from> " | awk '{print $1}')
-    [[ -z "$base" ]] && exit 0
-    $_GIT rebase -i "${base}^"
+rebase)
+    if [ $# -gt 1 ]; then
+        $_GIT "$@"
+    else
+        base=$($_GIT log --oneline --decorate | fzf --prompt="rebase from> " | awk '{print $1}')
+        [[ -z "$base" ]] && exit 0
+        $_GIT rebase -i "${base}^"
+    fi
     ;;
 compare)
     branch=$($_GIT branch --show-current)
@@ -43,6 +51,37 @@ add)
     else
         shift
         $_GIT add "$@"
+    fi
+    ;;
+wip)
+    shift
+    msg="${*:-wip}"
+    $_GIT add -A && $_GIT commit -m "wip: $msg" && $_GIT push
+    ;;
+switch)
+    if [ $# -gt 1 ]; then
+        $_GIT "$@"
+    else
+        branch=$($_GIT branch --sort=-committerdate --format='%(refname:short)' | fzf --prompt='switch to> ')
+        [[ -n "$branch" ]] && $_GIT switch "$branch"
+    fi
+    ;;
+cherry-pick)
+    if [ $# -gt 1 ]; then
+        $_GIT "$@"
+    else
+        hash=$($_GIT log --all --oneline | fzf --prompt='cherry-pick> ' | awk '{print $1}')
+        [[ -n "$hash" ]] && $_GIT cherry-pick "$hash"
+    fi
+    ;;
+restore)
+    if [ $# -gt 1 ]; then
+        $_GIT "$@"
+    else
+        file=$($_GIT ls-files | fzf --prompt='restore file> ')
+        [[ -z "$file" ]] && exit 0
+        ref=$($_GIT log --oneline | fzf --prompt='restore from> ' | awk '{print $1}')
+        [[ -n "$ref" ]] && $_GIT restore --source="$ref" -- "$file"
     fi
     ;;
 *)

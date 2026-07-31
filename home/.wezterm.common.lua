@@ -208,6 +208,29 @@ function M.apply(config, opts)
 				end
 			end),
 		},
+		-- keyd remaps ctrl+l to right arrow before WezTerm sees it, so WezTerm
+		-- receives RightArrow with no modifiers. When in a shell, send ctrl+right
+		-- (\e[1;5C) so zsh treats it as forward-word (partial accept) instead of
+		-- forward-char (full accept). Non-shell panes pass the key through normally.
+		{
+			key = "RightArrow",
+			mods = "NONE",
+			action = wezterm.action_callback(function(window, pane)
+				if pane_is_shell(pane) then
+					window:perform_action(wezterm.action.SendString("\x1b[1;5C"), pane)
+				else
+					window:perform_action(wezterm.action.SendKey({ key = "RightArrow" }), pane)
+				end
+			end),
+		},
+		-- Ctrl+Enter sends a custom CSI sequence (\e[13;5u) so that zsh-autosuggestion/zsh can distinguish it from a normal Enter keypress.
+		-- i.e i have it accept full suggestion with ctrl enter without it executing the command, normally this keystroke would execute the command since it
+		-- cant distinguish between the two, but with this custom sequence it can.
+		{
+			key = "Return",
+			mods = "CTRL",
+			action = wezterm.action.SendString("\x1b[13;5u"),
+		},
 	}
 
 	local custom_keys = opts.keys or {}
@@ -229,80 +252,9 @@ function M.apply(config, opts)
 	-- local vim_modes = dofile(wezterm.home_dir .. "/projects/wezterm-modes/plugin/init.lua")
 	local commands = opts.commands
 		or {
-			-- ── Git ───────────────────────────────────────────────────────────────
-			{
-				key = "gc",
-				description = "Git — Commit — type message",
-				execute = false,
-				command = "git commit -m '<cursor>'",
-			},
-			{
-				key = "gw",
-				description = "Git — WIP — add all, commit, push",
-				execute = false,
-				command = "git add -A && git commit -m 'wip: <cursor>' && git push",
-			},
-			{ key = "ga", description = "Git — Add", command = "git add" },
-			{
-				key = "gi",
-				description = "Git — Rewrite — interactive rebase from selected commit",
-				command = "git rewrite",
-			},
-			{
-				key = "gs",
-				description = "Git — Switch to selected branch",
-				command = [=[branch=$(git branch --sort=-committerdate --format='%(refname:short)' | fzf --prompt='switch to> ') && [[ -n "$branch" ]] && git switch "$branch"]=],
-			},
-			{
-				key = "gp",
-				description = "Git — Cherry-pick selected commit",
-				command = [=[hash=$(git log --all --oneline | fzf --prompt='cherry-pick> ' | awk '{print $1}') && [[ -n "$hash" ]] && git cherry-pick "$hash"]=],
-			},
-			{
-				key = "gr",
-				description = "Git — Restore file to selected commit",
-				command = [=[file=$(git ls-files | fzf --prompt='restore file> ') && [[ -n "$file" ]] && ref=$(git log --oneline | fzf --prompt='restore from> ' | awk '{print $1}') && [[ -n "$ref" ]] && git restore --source="$ref" -- "$file"]=],
-			},
-
-			-- ── AWS ───────────────────────────────────────────────────────────────
-			{
-				key = "al",
-				description = "AWS — SSO login — select profile",
-				command = [=[profile=$(grep '^\[profile ' ~/.aws/config | sed 's/^\[profile //;s/\]$//' | fzf --prompt='profile> ') && [[ -n "$profile" ]] && aws sso login --profile "$profile"]=],
-			},
-			{
-				key = "ae",
-				description = "AWS — ECR docker login — select profile",
-				command = [=[profile=$(grep '^\[profile ' ~/.aws/config | sed 's/^\[profile //;s/\]$//' | fzf --prompt='profile> ') && [[ -n "$profile" ]] && aws ecr get-login-password --profile "$profile" | docker login --username AWS --password-stdin "$(aws ecr describe-registry --profile "$profile" --query 'registryId' --output text).dkr.ecr.$(aws configure get region --profile "$profile").amazonaws.com"]=],
-			},
-			{
-				key = "ap",
-				description = "AWS — Set AWS_PROFILE — select profile",
-				command = [=[profile=$(grep '^\[profile ' ~/.aws/config | sed 's/^\[profile //;s/\]$//' | fzf --prompt='profile> ') && [[ -n "$profile" ]] && export AWS_PROFILE="$profile" && echo "Set AWS_PROFILE to $profile"]=],
-			},
-
-			-- ── Browser ───────────────────────────────────────────────────────────
-			{
-				key = "bb",
-				description = "Browser — Open a bookmark (fzf)",
-				command = [=[url=$(jq -r '.roots | .. | objects | select(has("type") and .type == "url") | (if .name == "" then .url else .name end) + "\t" + .url' ~/.config/google-chrome/Default/Bookmarks | fzf --prompt='bookmarks> ' --with-nth=1 --delimiter=$'\t' | cut -f2) && [[ -n "$url" ]] && browse "$url"]=],
-			},
-			{
-				key = "bs",
-				description = "Browser — Search in browser",
-				execute = false,
-				command = "browse 'https://www.google.com/search?q=<cursor>'",
-			},
-			{ key = "bg", description = "Browser — Open current git repo", command = "git browse" },
-
 			-- ── Kubectl ───────────────────────────────────────────────────────────
 			{ key = "kn", description = "Kubectl — Switch namespace", command = "kns" },
-			{ key = "kl", description = "Kubectl — Log", execute = false, command = "kubectl logs:json <cursor>" },
 			{ key = "kc", description = "Kubectl — Switch context", command = "kctx" },
-
-			-- ── Misc ──────────────────────────────────────────────────────────────
-			{ key = "v", description = "Neovim — Open in current directory", command = "nvim ." },
-			{ key = "vs", description = "Neovim — Scratchpad", command = "nvim-scratch" },
 		}
 	vim_modes.apply_to_config(config, {
 		commands = commands,

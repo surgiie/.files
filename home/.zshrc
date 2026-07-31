@@ -13,10 +13,11 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$PATH:$HOME/.npm/bin"
 export PATH="$PATH:$HOME/.local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
+export WORDCHARS='*?_-.[]~=/&;!#$%^(){}<>|+,'
 
-export ZSH_AUTOSUGGEST_STRATEGY=(history completion)
-export ZSH_AUTOSUGGEST_ACCEPT_WIDGETS=(forward-char end-of-line vi-forward-char vi-end-of-line)
-export ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS=(forward-word vi-forward-word vi-forward-word-end vi-forward-blank-word vi-forward-blank-word-end)
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+ZSH_AUTOSUGGEST_ACCEPT_WIDGETS=(forward-char end-of-line vi-forward-char vi-end-of-line)
+ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS=(forward-word vi-forward-word vi-forward-word-end vi-forward-blank-word vi-forward-blank-word-end)
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export KUBECOLOR_PAGING=auto
 export KUBECOLOR_PAGER="less -RF --quit-if-one-screen"
@@ -258,4 +259,7 @@ if [ -f "$HOME/.workrc" ]; then
     source "$HOME/.workrc"
 fi
 bindkey '^_' undo
-bindkey '^[l' forward-word
+# Ctrl+Enter is indistinguishable from Enter in terminals by default. WezTerm is
+# configured to send \e[13;5u instead, so we can bind it here to accept the full
+# autosuggestion without executing the command.
+bindkey $'\e[13;5u' autosuggest-accept
