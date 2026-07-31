@@ -90,12 +90,25 @@ return {
 		config = function()
 			vim.g.copilot_no_tab_map = true
 			vim.g.copilot_assume_mapped = true
-			vim.api.nvim_set_keymap("i", "<C-CR>", 'copilot#Accept("<CR>")', { expr = true, silent = true, noremap = false })
+			vim.api.nvim_set_keymap(
+				"i",
+				"<C-CR>",
+				'copilot#Accept("<CR>")',
+				{ expr = true, silent = true, noremap = false }
+			)
 			-- WSL: ConPTY strips <C-CR>, so WezTerm sends this explicit CSI-u sequence instead
-			vim.api.nvim_set_keymap("i", "<Esc>[13;5u", 'copilot#Accept("<CR>")', { expr = true, silent = true, noremap = false })
+			vim.api.nvim_set_keymap(
+				"i",
+				"<Esc>[13;5u",
+				'copilot#Accept("<CR>")',
+				{ expr = true, silent = true, noremap = false }
+			)
 			vim.keymap.set("i", "<M-Right>", "<Plug>(copilot-accept-word)")
-			-- zsh bindkey '^[l' (forward-word) means Alt-Right arrives as \el, so map raw sequence too
-			vim.keymap.set("i", "<Esc>l", "<Plug>(copilot-accept-word)")
+			-- ctrl+l → right arrow (keyd) → plain right in nvim (WezTerm passes through
+			-- for non-shell panes). Accept next copilot word if a suggestion exists,
+			-- otherwise fall back to moving the cursor one char to the right.
+			-- Must use expr map because copilot#AcceptWord returns a string of keys to feed.
+			vim.api.nvim_set_keymap("i", "<Right>", 'copilot#GetDisplayedSuggestion().text != "" ? copilot#AcceptWord() : "<Right>"', { expr = true, silent = true, noremap = true })
 		end,
 	},
 
