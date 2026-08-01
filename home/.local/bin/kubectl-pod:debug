@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# kubectl-pod:debug - clone a pod as a debug version with a sleep container
+# and root access, removing ownership/labels so it runs independently.
+# -------------------------------------------------------------------------
 set -euo pipefail
 
 if [[ -z "${1:-}" ]]; then

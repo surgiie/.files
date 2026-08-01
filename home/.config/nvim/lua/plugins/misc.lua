@@ -1,7 +1,19 @@
--- Plugins with zero or not a lot of config.misc
+-- Plugins with zero or minimal config
 return {
 	{ "matze/vim-move" },
 	{ "mg979/vim-visual-multi" },
+	{
+		"mattn/emmet-vim",
+		ft = { "html", "css", "javascript", "javascriptreact", "typescriptreact", "vue" },
+		config = function()
+			vim.api.nvim_create_autocmd("FileType", {
+				pattern = "html,css,javascript,javascriptreact,typescriptreact,vue",
+				callback = function()
+					vim.cmd([[imap <silent><buffer><expr> <Tab> emmet#expandAbbrIntelligent("\<Tab>")]])
+				end,
+			})
+		end,
+	},
 	{
 		"ntpeters/vim-better-whitespace",
 		config = function()
@@ -64,7 +76,7 @@ return {
 			},
 			completions = { lsp = { enabled = true } },
 		},
-		config = function(_, opts)
+		config = function()
 			require("render-markdown").setup({
 				code = { highlight_border = false },
 			})

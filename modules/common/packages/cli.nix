@@ -43,6 +43,7 @@
     nodejs_24
     typescript-language-server
     emmet-language-server
+    vue-language-server
     ruff
     stylua
     lua-language-server

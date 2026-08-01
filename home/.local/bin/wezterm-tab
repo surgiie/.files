@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# wezterm-tab - spawn a command in a new WezTerm tab and focus the window.
+# Falls back to launching a new WezTerm instance via hyprtoggle when no
+# existing WezTerm window is found.
+#
+# Options:
+#   --print-pane-id   Print the spawned pane ID to stdout
+#   --close-on-exit   Close the tab when the command exits (no shell fallback)
+#   --wait-for-exit   Block until the spawned pane exits
+#   --focus-previous  Refocus the previously active Hyprland window on exit
+# -------------------------------------------------------------------------
 
 set -euo pipefail
 
+# -------------------------------------------------------------------------
+# Arguments
+# -------------------------------------------------------------------------
 print_pane_id=false
 close_on_exit=false
 wait_for_exit=false
@@ -45,6 +59,9 @@ if [[ "$#" -eq 0 ]]; then
     exit 1
 fi
 
+# -------------------------------------------------------------------------
+# Setup
+# -------------------------------------------------------------------------
 if [[ "$focus_previous" == true ]]; then
     prev_window=$(hyprctl activewindow -j | jq -r '.address')
 fi
@@ -59,6 +76,9 @@ if [[ "$close_on_exit" != true ]]; then
     shell_script="$command_string; exec $shell_path -l"
 fi
 
+# -------------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------------
 restore_previous_window() {
     if [[ "$focus_previous" != true ]]; then
         return
@@ -73,6 +93,9 @@ restore_previous_window() {
     fi
 }
 
+# -------------------------------------------------------------------------
+# Spawn tab in existing WezTerm window, or launch a new one
+# -------------------------------------------------------------------------
 wezterm_window_id=$(wezterm cli list --format json 2>/dev/null | jq -r '.[0].window_id')
 
 if [[ -n "$wezterm_window_id" && "$wezterm_window_id" != "null" ]]; then

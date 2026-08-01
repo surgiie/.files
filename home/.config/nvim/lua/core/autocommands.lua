@@ -78,11 +78,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 		hl(0, "NoiceCmdlinePopupTitle", { fg = "#ffffff", bg = "NONE" })
 		hl(0, "NoiceConfirmBorder", { fg = "#ffffff", bg = "NONE" })
 		hl(0, "NoiceCmdlineIcon", { fg = "#ffffff", bg = "NONE" })
-		-- ── Snacks ────────────────────────────────────────────────────────────────
-		hl(0, "SnacksPicker", { bg = "none", nocombine = true })
-		hl(0, "SnacksPickerBorder", { fg = "#62d8f1", bg = "none", nocombine = true })
-
-		-- ── Neo-tree ──────────────────────────────────────────────────────────────
+-- ── Neo-tree ──────────────────────────────────────────────────────────────
 		hl(0, "NeoTreeCursorLine", { bg = "#1f2233" })
 		hl(0, "NeoTreeNormal", { bg = "NONE" })
 		hl(0, "NeoTreeNormalNC", { bg = "NONE" })

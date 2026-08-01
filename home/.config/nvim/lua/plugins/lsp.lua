@@ -47,6 +47,7 @@ return {
 		vim.lsp.config("*", {
 			capabilities = capabilities,
 		})
+		-- Lua
 		vim.lsp.config("lua_ls", {
 			settings = {
 				Lua = {
@@ -71,6 +72,18 @@ return {
 		})
 		vim.lsp.enable("lua_ls")
 
+		-- Vue
+		if is_executable("vue-language-server") then
+			vim.lsp.config("volar", {
+				filetypes = { "vue" },
+				init_options = {
+					vue = { hybridMode = false },
+				},
+			})
+			vim.lsp.enable("volar")
+		end
+
+		-- CSS / HTML / JS (Emmet)
 		vim.lsp.config("emmet_language_server", {
 			filetypes = {
 				"css",
@@ -78,6 +91,7 @@ return {
 				"javascript",
 				"javascriptreact",
 				"typescriptreact",
+				"vue",
 			},
 			init_options = {
 				includeLanguages = {},
@@ -91,12 +105,14 @@ return {
 				variables = {},
 			},
 		})
+		-- Bash
 		vim.lsp.config("bashls", {
 			filetypes = { "sh", "zsh", "bash" },
 		})
 		vim.lsp.enable("bashls")
 		vim.lsp.enable("emmet_language_server")
 
+		-- TypeScript / JavaScript
 		if is_executable("node") or is_executable("npm") then
 			vim.lsp.config("ts_ls", {
 				filetypes = {
@@ -116,11 +132,13 @@ return {
 			vim.lsp.enable("ts_ls")
 		end
 
+		-- PHP
 		if is_executable("php") then
 			vim.lsp.config("intelephense", {})
 			vim.lsp.enable("intelephense")
 		end
 
+		-- Go
 		if is_executable("go") then
 			vim.lsp.config("gopls", {
 				settings = {
@@ -133,6 +151,7 @@ return {
 			vim.lsp.enable("gopls")
 		end
 
+		-- Nix
 		if is_executable("nixd") then
 			vim.lsp.config("nixd", {})
 			vim.lsp.enable("nixd")
@@ -141,11 +160,13 @@ return {
 			vim.lsp.enable("nil_ls")
 		end
 
+		-- XML
 		if is_executable("lemminx") then
 			vim.lsp.config("lemminx", {})
 			vim.lsp.enable("lemminx")
 		end
 
+		-- Python
 		if is_executable("python3") or is_executable("python") then
 			vim.lsp.config("ruff", {})
 			vim.lsp.enable("ruff")

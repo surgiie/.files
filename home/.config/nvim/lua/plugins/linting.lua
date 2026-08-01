@@ -7,8 +7,8 @@ return {
 		local eslint = lint.linters.eslint_d
 
 		lint.linters_by_ft = {
-			javascript = { "eslint" },
-			typescript = { "eslint" },
+			javascript = { "eslint_d" },
+			typescript = { "eslint_d" },
 			python = { "pylint" },
 		}
 
@@ -24,9 +24,10 @@ return {
 			end,
 		}
 
-		vim.api.nvim_create_autocmd({ "BufEnter", "InsertLeave" }, {
+		vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
 			group = lint_augroup,
 			callback = function()
+				lint.try_lint()
 				vim.diagnostic.config({ virtual_lines = true })
 			end,
 		})

@@ -56,12 +56,7 @@ return {
 				end,
 			})
 
-			vim.api.nvim_create_autocmd("User", {
-				pattern = "SnacksPickerPreview",
-				callback = function(ev)
-					vim.b[ev.buf].ibl_disable = true
-				end,
-			})
+
 		end,
 	},
 }

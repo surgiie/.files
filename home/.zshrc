@@ -30,11 +30,6 @@ if [[ -n "$WEZTERM_EXECUTABLE" ]]; then
     unset _wezterm_integration
 fi
 
-# -------------------------------------------------------------------------
-# Init
-# -------------------------------------------------------------------------
-mkdir -p "$HOME/.local/bin"
-
 if [ ! -f "$HOME/.oh-my-zsh/themes/bullet-train.zsh-theme" ]; then
    mkdir -p "$HOME/.oh-my-zsh/themes"
    curl -fsSL https://raw.githubusercontent.com/caiogondim/bullet-train.zsh/refs/heads/master/bullet-train.zsh-theme -o "$HOME/.oh-my-zsh/themes/bullet-train.zsh-theme"

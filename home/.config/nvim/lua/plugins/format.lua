@@ -9,6 +9,7 @@ return {
 
 		if is_executable("shfmt") then
 			formatters_by_ft.sh = { "shfmt" }
+			formatters_by_ft.zsh = { "shfmt" }
 		end
 
 		if is_executable("stylua") then
@@ -25,6 +26,10 @@ return {
 
 		if is_executable("node") or is_executable("npm") then
 			formatters_by_ft.javascript = { "prettier", "prettierd", stop_after_first = true }
+			formatters_by_ft.javascriptreact = { "prettier", "prettierd", stop_after_first = true }
+			formatters_by_ft.typescript = { "prettier", "prettierd", stop_after_first = true }
+			formatters_by_ft.typescriptreact = { "prettier", "prettierd", stop_after_first = true }
+			formatters_by_ft.vue = { "prettier", "prettierd", stop_after_first = true }
 			formatters_by_ft.yaml = { "prettier", "prettierd", stop_after_first = true }
 		end
 
