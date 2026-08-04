@@ -27,3 +27,7 @@ read -r -p "Rebuild successful. Do you want to clean up old generations? [y/N] "
 if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
     sudo nix-collect-garbage -d
 fi
+
+if command -v update-desktop-database &>/dev/null; then
+    update-desktop-database "$HOME/.local/share/applications/"
+fi

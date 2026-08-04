@@ -104,6 +104,7 @@ return {
 			"vimdoc",
 			"xml",
 			"php",
+			"vue",
 		},
 	},
 	config = function(_, opts)

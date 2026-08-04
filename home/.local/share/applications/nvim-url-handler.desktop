@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Neovim URL Handler
+Comment=Handle nvim:// deep links to open files in Neovim
+Exec=/home/surgiie/.local/bin/nvim-url-handler %u
+Type=Application
+MimeType=x-scheme-handler/nvim;

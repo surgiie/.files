@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Handles nvim:// protocol URLs.
+# Format: nvim:///absolute/path/to/file[:line[:col]]
+#         nvim://relative/path [:line[:col]]
+
+set -euo pipefail
+
+url="${1-}"
+
+if [[ -z "$url" ]]; then
+    echo "usage: nvim-url-handler <nvim://...>" >&2
+    exit 1
+fi
+
+# Strip scheme and query string
+path="${url#nvim://}"
+path="${path%%\?*}"
+
+# Drop "file" host component (nvim://file/path → /path)
+[[ "$path" == file/* ]] && path="${path#file}"
+
+# Separate optional :line:col suffix
+col=""
+line=""
+
+if [[ "$path" =~ ^(.*):([0-9]+):([0-9]+)$ ]]; then
+    path="${BASH_REMATCH[1]}"
+    line="${BASH_REMATCH[2]}"
+    col="${BASH_REMATCH[3]}"
+elif [[ "$path" =~ ^(.*):([0-9]+)$ ]]; then
+    path="${BASH_REMATCH[1]}"
+    line="${BASH_REMATCH[2]}"
+fi
+
+if [[ -z "$path" ]]; then
+    echo "nvim-url-handler: no path in URL '$url'" >&2
+    exit 1
+fi
+
+# Use the path itself as cwd if it's a directory, otherwise its parent
+if [[ -d "$path" ]]; then
+    cwd="$path"
+else
+    cwd="$(dirname "$path")"
+fi
+
+cmd=(nvim "$path")
+
+if [[ -n "$line" && -n "$col" ]]; then
+    cmd=(nvim "+call cursor($line,$col)" "$path")
+elif [[ -n "$line" ]]; then
+    cmd=(nvim "+$line" "$path")
+fi
+
+exec wezterm-tab -- bash -lc "cd $(printf '%q' "$cwd") && exec ${cmd[*]}"

@@ -13,7 +13,6 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$PATH:$HOME/.npm/bin"
 export PATH="$PATH:$HOME/.local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
-export WORDCHARS='*?_-.[]~=/&;!#$%^(){}<>|+,'
 
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 ZSH_AUTOSUGGEST_ACCEPT_WIDGETS=(forward-char end-of-line vi-forward-char vi-end-of-line)
@@ -31,8 +30,8 @@ if [[ -n "$WEZTERM_EXECUTABLE" ]]; then
 fi
 
 if [ ! -f "$HOME/.oh-my-zsh/themes/bullet-train.zsh-theme" ]; then
-   mkdir -p "$HOME/.oh-my-zsh/themes"
-   curl -fsSL https://raw.githubusercontent.com/caiogondim/bullet-train.zsh/refs/heads/master/bullet-train.zsh-theme -o "$HOME/.oh-my-zsh/themes/bullet-train.zsh-theme"
+    mkdir -p "$HOME/.oh-my-zsh/themes"
+    curl -fsSL https://raw.githubusercontent.com/caiogondim/bullet-train.zsh/refs/heads/master/bullet-train.zsh-theme -o "$HOME/.oh-my-zsh/themes/bullet-train.zsh-theme"
 fi
 # -------------------------------------------------------------------------
 # WSL
@@ -47,11 +46,11 @@ ZSH_THEME="bullet-train"
 BULLETTRAIN_PROMPT_CHAR="╰─➤  "
 BULLETTRAIN_GIT_PROMPT_CMD="\$(_omz_git_prompt_info)"
 BULLETTRAIN_PROMPT_ORDER=(
-  time
-  nix
-  dir
-  git
-  virtualenv
+    time
+    nix
+    dir
+    git
+    virtualenv
 )
 
 BULLETTRAIN_NIX_BG=green
@@ -163,7 +162,7 @@ function _custom_prompt_prefix() {
     local prompt_parts=""
 
     # Add kube_ps1 if available and has a valid context
-    if typeset -f kube_ps1 > /dev/null; then
+    if typeset -f kube_ps1 >/dev/null; then
         # Only show if kubectl has a current context
         if command -v kubectl &>/dev/null && kubectl config current-context &>/dev/null; then
             local kube_info="$(kube_ps1)"
@@ -220,12 +219,11 @@ compdef _kubectl k kubecolor
 
 _json_pipe() {
     local cmd="${words[2]}"
-    (( CURRENT-- ))
+    ((CURRENT--))
     shift words
     _normal
 }
 compdef _json_pipe json:pipe
-
 
 # -------------------------------------------------------------------------
 # fzf-tab (wraps all zsh completions with fzf, must come after compinit)
