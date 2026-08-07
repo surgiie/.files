@@ -12,6 +12,7 @@
 #   rollout undo      - fzf-pick a deployment+revision to undo to
 #   context           - fzf-pick a context to switch to
 #   namespace         - fzf-pick a namespace to switch to
+#   port-forward      - fzf-pick a pod and prompt for ports to forward
 #   get secret --decode - decode all data keys in a secret
 # -----------------------------------------------------------------------
 
@@ -309,11 +310,11 @@ logs)
     elif [[ $# -gt 0 ]]; then
         "$_KUBECTL" logs "$@" "${log_flags[@]}"
     else
-        selection=$(_pick_pod "pod" "${kubectl_flags[@]}")
+        selection=$(_pick_pod "pod" -A)
         [[ -z "$selection" ]] && exit 0
         ns="${selection%%/*}"
         pod="${selection##*/}"
-        [[ "$ns" != "$pod" ]] && kubectl_flags+=("-n" "$ns")
+        kubectl_flags+=("-n" "$ns")
 
         container=$("$_KUBECTL" get pod "$pod" "${kubectl_flags[@]}" \
             -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}' |
@@ -330,13 +331,11 @@ containers)
     if [[ -n "${1:-}" ]]; then
         "$_KUBECTL" get pod "$@" -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'
     else
-        selection=$(_pick_pod "pod" "$@")
+        selection=$(_pick_pod "pod" -A)
         [[ -z "$selection" ]] && exit 0
         ns="${selection%%/*}"
         pod="${selection##*/}"
-        flags=()
-        [[ "$ns" != "$pod" ]] && flags+=("-n" "$ns")
-        "$_KUBECTL" get pod "$pod" "${flags[@]}" -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'
+        "$_KUBECTL" get pod "$pod" -n "$ns" -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'
     fi
     ;;
 
@@ -361,11 +360,11 @@ clone)
         pod="$1"
         shift
     else
-        selection=$(_pick_pod "clone pod" "${kubectl_flags[@]}")
+        selection=$(_pick_pod "clone pod" -A)
         [[ -z "$selection" ]] && exit 0
         ns="${selection%%/*}"
         pod="${selection##*/}"
-        [[ "$ns" != "$pod" ]] && kubectl_flags+=("-n" "$ns")
+        kubectl_flags+=("-n" "$ns")
     fi
 
     if [[ "$run_as_root" == true ]]; then
@@ -394,11 +393,11 @@ exec)
         "$_KUBECTL" exec -it "$@"
     else
         kubectl_flags=()
-        selection=$(_pick_pod "exec pod" "${kubectl_flags[@]}")
+        selection=$(_pick_pod "exec pod" -A)
         [[ -z "$selection" ]] && exit 0
         ns="${selection%%/*}"
         pod="${selection##*/}"
-        [[ "$ns" != "$pod" ]] && kubectl_flags+=("-n" "$ns")
+        kubectl_flags+=("-n" "$ns")
 
         container=$("$_KUBECTL" get pod "$pod" "${kubectl_flags[@]}" \
             -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}' |
@@ -500,6 +499,34 @@ namespace)
     ns=$("$_KUBECTL" get namespaces --no-headers -o custom-columns=":metadata.name" | fzf --prompt="namespace> ")
     [[ -z "$ns" ]] && exit 0
     "$_KUBECTL" config set-context --current --namespace="$ns"
+    ;;
+
+# -----------------------------------------------------------------------
+port-forward)
+    shift
+    if [[ $# -gt 0 ]]; then
+        "$_KUBECTL" port-forward "$@"
+    else
+        kubectl_flags=()
+        selection=$(_pick_pod "port-forward" -A)
+        [[ -z "$selection" ]] && exit 0
+        ns="${selection%%/*}"
+        pod="${selection##*/}"
+        kubectl_flags+=("-n" "$ns")
+
+        ports=$("$_KUBECTL" get pod "$pod" "${kubectl_flags[@]}" \
+            -o jsonpath='{range .spec.containers[*].ports[*]}{.containerPort}{"\n"}{end}' |
+            sort -un |
+            fzf --prompt="container port> ")
+        [[ -z "$ports" ]] && exit 0
+
+        printf "local port [%s]: " "$ports"
+        read -r local_port
+        local_port="${local_port:-$ports}"
+
+        info "Forwarding $local_port → $ports on $pod"
+        "$_KUBECTL" port-forward "pod/$pod" "${kubectl_flags[@]}" "$local_port:$ports"
+    fi
     ;;
 
 # -----------------------------------------------------------------------
