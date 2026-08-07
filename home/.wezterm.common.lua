@@ -253,8 +253,8 @@ function M.apply(config, opts)
 	local commands = opts.commands
 		or {
 			-- ── Kubectl ───────────────────────────────────────────────────────────
-			{ key = "kn", description = "Kubectl — Switch namespace", command = "kns" },
-			{ key = "kc", description = "Kubectl — Switch context", command = "kctx" },
+			{ key = "kn", description = "Kubectl — Switch namespace", command = "kubectl namespace" },
+			{ key = "kc", description = "Kubectl — Switch context", command = "kubectl context" },
 		}
 	vim_modes.apply_to_config(config, {
 		commands = commands,

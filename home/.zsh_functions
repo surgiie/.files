@@ -129,24 +129,6 @@ virtualenv_make(){
 }
 
 # -------------------------------------------------------------------------
-# Kubectl
-# -------------------------------------------------------------------------
-
-# Switch kubectl namespace interactively via fzf.
-kns() {
-    local ns
-    ns=$(kubectl get namespaces --no-headers -o custom-columns=':metadata.name' | fzf --prompt='namespace> ')
-    [[ -n "$ns" ]] && kubectl config set-context --current --namespace="$ns" && echo "Switched to namespace: $ns"
-}
-
-# Switch kubectl context interactively via fzf.
-kctx() {
-    local ctx
-    ctx=$(kubectl config get-contexts --no-headers -o name | fzf --prompt='context> ')
-    [[ -n "$ctx" ]] && kubectl config use-context "$ctx"
-}
-
-# -------------------------------------------------------------------------
 # Nix
 # -------------------------------------------------------------------------
 

@@ -8,9 +8,11 @@
 #   logs              - fzf-pick a pod+container and stream logs, or --monitor to poll for a pattern
 #   clone             - fzf-pick or name a pod to clone, optionally as root with --root
 #   exec              - fzf-pick a pod+container and exec a shell, or pass through to native kubectl exec
-#   explore           - fzf-pick a resource type+name and interactively explore its JSON with fx
-#   resource:describe - fzf-pick a resource type+name and describe it
-#   secret:decode     - decode all keys in a secret
+#   describe          - fzf-pick a resource type+name and describe it
+#   rollout undo      - fzf-pick a deployment+revision to undo to
+#   context           - fzf-pick a context to switch to
+#   namespace         - fzf-pick a namespace to switch to
+#   get secret --decode - decode all data keys in a secret
 # -----------------------------------------------------------------------
 
 _KUBECTL=/run/current-system/sw/bin/kubectl
@@ -47,49 +49,64 @@ _pick_pod() {
         awk '{print $1"/"$2}'
 }
 
-# given "namespace/name" or "name", echo -n flag and pod name separately
-_parse_pod() {
-    local input="$1"
-    local ns name
-    ns="${input%%/*}"
-    name="${input##*/}"
-    if [[ "$ns" == "$name" ]]; then
-        echo "" "$name"
-    else
-        echo "-n $ns" "$name"
-    fi
-}
-
 case "$1" in
 
 # -----------------------------------------------------------------------
 get)
-    # Strip --query flag before passing to kubectl
-    query=false
-    filtered_args=()
-    for arg in "${@:2}"; do
-        [[ "$arg" == "--jq" ]] && query=true || filtered_args+=("$arg")
-    done
-
-    if [[ "$query" == true ]]; then
-        "$_KUBECTL" get "${filtered_args[@]}" -o json | jq interactive
-    else
-        resource="${2:-}"
-        extra_args=("${@:3}")
-        wide_resources="pod pods nodes node deployment deployment service services"
-        if [[ " $wide_resources " == *" $resource "* ]] && [[ ${#extra_args[@]} -eq 0 ]]; then
-            "$_KUBECOLOR" "$@" -o wide
+    resource="${2:-}"
+    case "$resource" in
+    secret | secrets)
+        decode=false
+        filtered_args=()
+        for arg in "${@:3}"; do
+            [[ "$arg" == "--decode" ]] && decode=true || filtered_args+=("$arg")
+        done
+        if [[ "$decode" == true ]]; then
+            secret_name="${filtered_args[0]:-}"
+            if [[ -z "$secret_name" ]]; then
+                echo "Usage: kubectl get secret <name> [kubectl flags...] --decode" >&2
+                exit 1
+            fi
+            extra_flags=("${filtered_args[@]:1}")
+            "$_KUBECTL" get secret "$secret_name" "${extra_flags[@]}" -o json |
+                jq -r '.data | to_entries[] | .key + ": " + (.value | @base64d)'
         else
             "$_KUBECOLOR" "$@"
         fi
-    fi
+        ;;
+    *)
+        query=false
+        filtered_args=()
+        for arg in "${@:2}"; do
+            [[ "$arg" == "--jq" ]] && query=true || filtered_args+=("$arg")
+        done
+        if [[ "$query" == true ]]; then
+            "$_KUBECTL" get "${filtered_args[@]}" -o json | jq interactive
+        else
+            extra_args=("${@:3}")
+            wide_resources="pod pods nodes node deployment deployments service services"
+            if [[ " $wide_resources " == *" $resource "* ]] && [[ ${#extra_args[@]} -eq 0 ]]; then
+                "$_KUBECOLOR" "$@" -o wide
+            else
+                "$_KUBECOLOR" "$@"
+            fi
+        fi
+        ;;
+    esac
     ;;
 
 # -----------------------------------------------------------------------
 delete)
     shift
-    if [[ $# -gt 0 ]]; then
+    if [[ $# -ge 2 ]]; then
         "$_KUBECTL" delete "$@"
+    elif [[ $# -eq 1 ]]; then
+        resource_type="$1"
+        resource_name=$("$_KUBECTL" get "$resource_type" --no-headers \
+            -o custom-columns=":metadata.name" 2>/dev/null |
+            fzf --prompt="$resource_type> ")
+        [[ -z "$resource_name" ]] && exit 0
+        "$_KUBECTL" delete "$resource_type" "$resource_name"
     else
         resource_type=$("$_KUBECTL" api-resources --verbs=delete --no-headers -o name 2>/dev/null |
             fzf --prompt="resource type> ")
@@ -393,55 +410,7 @@ exec)
     ;;
 
 # -----------------------------------------------------------------------
-explore)
-    shift
-    kubectl_flags=()
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-        --namespace | -n) kubectl_flags+=("-n" "$2"); shift 2 ;;
-        *) break ;;
-        esac
-    done
-
-    resource_type=$(printf 'pod\ndeployment\nservice\nconfigmap\nsecret\nstatefulset\ndaemonset\njob\ncronjob\ningress\nreplicaset\nserviceaccount\npersistentvolumeclaim\n' |
-        fzf --prompt="resource type> ")
-    [[ -z "$resource_type" ]] && exit 0
-
-    # Fetch all resources once into a temp file
-    tmp=$(mktemp)
-    trap 'rm -f "$tmp"' EXIT
-    "$_KUBECTL" get "$resource_type" "${kubectl_flags[@]}" -o json 2>/dev/null >"$tmp"
-    [[ ! -s "$tmp" ]] && { warn "No ${resource_type}s found."; exit 1; }
-
-    # Extract all paths from first item, show value preview in fzf
-    field=$(jq -r '
-        .items[0] |
-        [path(..)] |
-        map(map(tostring) | join(".")) |
-        .[]
-    ' "$tmp" | fzf --prompt="field> " \
-            --preview="jq -r --arg f {} '
-                [.items[] |
-                    .metadata.name as \$n |
-                    (try getpath(\$f | split(\".\") | map(if test(\"^[0-9]+\$\") then tonumber else . end)) catch null) as \$v |
-                    \"\(\$n): \(\$v)\"
-                ][]
-            ' \"$tmp\"" \
-            --preview-window=right:60%)
-    [[ -z "$field" ]] && exit 0
-
-    # Build {name: value} object and pipe to fx
-    jq --arg field "$field" '
-        [.items[] |
-            .metadata.name as $name |
-            (try getpath($field | split(".") | map(if test("^[0-9]+$") then tonumber else . end)) catch null) as $val |
-            {key: $name, value: $val}
-        ] | from_entries
-    ' "$tmp" | jq interactive
-    ;;
-
-# -----------------------------------------------------------------------
-resource:describe)
+describe)
     shift
     kubectl_flags=()
     while [[ $# -gt 0 ]]; do
@@ -454,29 +423,83 @@ resource:describe)
         esac
     done
 
-    resource_type=$(printf 'pod\ndeployment\nservice\nconfigmap\nsecret\nstatefulset\ndaemonset\njob\ncronjob\ningress\nreplicaset\nserviceaccount\npersistentvolumeclaim\n' |
-        fzf --prompt="resource type> ")
-    [[ -z "$resource_type" ]] && exit 0
+    if [[ $# -ge 2 ]]; then
+        "$_KUBECTL" describe "$@" "${kubectl_flags[@]}"
+    elif [[ $# -eq 1 ]]; then
+        resource_type="$1"
+        resource_name=$("$_KUBECTL" get "$resource_type" "${kubectl_flags[@]}" \
+            --no-headers -o custom-columns=":metadata.name" |
+            fzf --prompt="$resource_type> ")
+        [[ -z "$resource_name" ]] && exit 0
+        "$_KUBECTL" describe "$resource_type" "$resource_name" "${kubectl_flags[@]}"
+    else
+        resource_type=$(printf 'pod\ndeployment\nservice\nconfigmap\nsecret\nstatefulset\ndaemonset\njob\ncronjob\ningress\nreplicaset\nserviceaccount\npersistentvolumeclaim\n' |
+            fzf --prompt="resource type> ")
+        [[ -z "$resource_type" ]] && exit 0
 
-    resource_name=$("$_KUBECTL" get "$resource_type" "${kubectl_flags[@]}" \
-        --no-headers -o custom-columns=":metadata.name" |
-        fzf --prompt="$resource_type> ")
-    [[ -z "$resource_name" ]] && exit 0
+        resource_name=$("$_KUBECTL" get "$resource_type" "${kubectl_flags[@]}" \
+            --no-headers -o custom-columns=":metadata.name" |
+            fzf --prompt="$resource_type> ")
+        [[ -z "$resource_name" ]] && exit 0
 
-    "$_KUBECTL" describe "$resource_type" "$resource_name" "${kubectl_flags[@]}"
+        "$_KUBECTL" describe "$resource_type" "$resource_name" "${kubectl_flags[@]}"
+    fi
     ;;
 
 # -----------------------------------------------------------------------
-secret:decode)
+rollout)
     shift
-    if [[ -z "${1:-}" ]]; then
-        echo "Usage: kubectl secret:decode <secret-name> [kubectl flags...]" >&2
-        exit 1
-    fi
-    secret_name="$1"
-    shift
-    "$_KUBECTL" get secret "$secret_name" "$@" -o json |
-        jq -r '.data | to_entries[] | .key + ": " + (.value | @base64d)'
+    case "${1:-}" in
+    undo)
+        shift
+        kubectl_flags=()
+        deployment=""
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+            --namespace | -n)
+                kubectl_flags+=("-n" "$2")
+                shift 2
+                ;;
+            *)
+                deployment="$1"
+                shift
+                ;;
+            esac
+        done
+
+        if [[ -z "$deployment" ]]; then
+            deployment=$("$_KUBECTL" get deployments "${kubectl_flags[@]}" \
+                --no-headers -o custom-columns=":metadata.name" |
+                fzf --prompt="deployment> ")
+            [[ -z "$deployment" ]] && exit 0
+        fi
+
+        revision=$("$_KUBECTL" rollout history deployment "$deployment" "${kubectl_flags[@]}" |
+            tail -n +3 |
+            fzf --prompt="revision> " --tac |
+            awk '{print $1}')
+        [[ -z "$revision" ]] && exit 0
+
+        "$_KUBECTL" rollout undo deployment "$deployment" "${kubectl_flags[@]}" --to-revision="$revision"
+        ;;
+    *)
+        "$_KUBECTL" rollout "$@"
+        ;;
+    esac
+    ;;
+
+# -----------------------------------------------------------------------
+context)
+    ctx=$("$_KUBECTL" config get-contexts --no-headers -o name | fzf --prompt="context> ")
+    [[ -z "$ctx" ]] && exit 0
+    "$_KUBECTL" config use-context "$ctx"
+    ;;
+
+# -----------------------------------------------------------------------
+namespace)
+    ns=$("$_KUBECTL" get namespaces --no-headers -o custom-columns=":metadata.name" | fzf --prompt="namespace> ")
+    [[ -z "$ns" ]] && exit 0
+    "$_KUBECTL" config set-context --current --namespace="$ns"
     ;;
 
 # -----------------------------------------------------------------------
