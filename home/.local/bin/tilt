@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+TILT_BIN="$(PATH="${PATH/\/home\/surgiie\/.local\/bin:/}" command -v tilt)"
+exec env NO_COLOR=1 "$TILT_BIN" "$@"

@@ -520,7 +520,7 @@ port-forward)
             fzf --prompt="container port> ")
         [[ -z "$ports" ]] && exit 0
 
-        printf "local port [%s]: " "$ports"
+        printf "local port (default: %s): " "$ports"
         read -r local_port
         local_port="${local_port:-$ports}"
 
