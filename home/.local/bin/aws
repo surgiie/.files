@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# aws - aws wrapper
+#
+# Custom subcommands:
+#   route53 lookup - look up a domain in Route53 hosted zones
+#
+# All other invocations are passed through to the real aws CLI.
+# -----------------------------------------------------------------------
+
+AWS_BIN="$(PATH="${PATH/\/home\/surgiie\/.local\/bin:/}" command -v aws)"
+
+if [[ "$1" == "route53" && "$2" == "lookup" ]]; then
+    shift 2
+    export AWS_PAGER=""
+
+    domain=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --domain) domain="$2"; shift 2 ;;
+        *) echo "Unknown option: $1"; echo "Usage: aws route53 lookup --domain <domain>"; exit 1 ;;
+        esac
+    done
+
+    [[ -n "$domain" ]] || { echo "Usage: aws route53 lookup --domain <domain>"; exit 1; }
+
+    domain="${domain%.}"
+
+    echo "Checking $domain..."
+
+    zone="$domain"
+    hosted_zone_id=""
+    matched_zone=""
+
+    while :; do
+        hosted_zone_id=$(
+            "$AWS_BIN" route53 list-hosted-zones-by-name \
+                --dns-name "${zone}." \
+                --query "HostedZones[?Name=='${zone}.'].Id | [0]" \
+                --output text 2>/dev/null
+        )
+
+        if [[ "$hosted_zone_id" != "None" && -n "$hosted_zone_id" ]]; then
+            hosted_zone_id="${hosted_zone_id##*/}"
+            matched_zone="$zone"
+            break
+        fi
+
+        [[ "$zone" == *.* ]] || break
+        zone="${zone#*.}"
+    done
+
+    if [[ -z "$hosted_zone_id" ]]; then
+        echo "RESULT: MISSING"
+        echo "REASON: no hosted zone found"
+        exit 1
+    fi
+
+    echo "Hosted zone: $matched_zone"
+    echo "Hosted zone id: $hosted_zone_id"
+
+    if [[ "$matched_zone" == "$domain" ]]; then
+        echo "RESULT: HOSTED ZONE"
+        exit 0
+    fi
+
+    record=$(
+        "$AWS_BIN" route53 list-resource-record-sets \
+            --hosted-zone-id "$hosted_zone_id" \
+            --start-record-name "${domain}." \
+            --max-items 1 \
+            --query 'ResourceRecordSets[0].Name' \
+            --output text 2>/dev/null || true
+    )
+
+    record="${record%.}"
+
+    if [[ "$record" == "$domain" ]]; then
+        echo "RESULT: EXPLICIT RECORD"
+        exit 0
+    fi
+
+    wildcard="*.${matched_zone}"
+
+    wildcard_record=$(
+        "$AWS_BIN" route53 list-resource-record-sets \
+            --hosted-zone-id "$hosted_zone_id" \
+            --query 'ResourceRecordSets[].Name' \
+            --output text 2>/dev/null |
+            tr '\t' '\n' |
+            sed 's/^\\052/*/' |
+            grep -Fx "${wildcard}." || true
+    )
+
+    if [[ "$wildcard_record" == "${wildcard}." ]]; then
+        echo "RESULT: NOT EXPLICIT"
+        echo "REASON: resolved by wildcard ${wildcard} (CNAME?)"
+        exit 0
+    fi
+
+    echo "RESULT: MISSING"
+    echo "HINT: Hosted Zone found, but no record for this domain. Add an explicit A, AAAA, CNAME, or Alias record?"
+    exit 1
+else
+    exec "$AWS_BIN" "$@"
+fi
