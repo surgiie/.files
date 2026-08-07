@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# hypr - wrapper around hyprctl that adds custom subcommands.
+#
+# Custom subcommands:
+#   close   - kill active window and focus/maximize the previously focused one
+#   switch  - fzf window switcher
+# -----------------------------------------------------------------------
+
+_HYPRCTL=$(PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "$(dirname "$0")" | tr '\n' ':') command -v hyprctl)
+
+case "$1" in
+
+# -----------------------------------------------------------------------
+close)
+    set -euo pipefail
+
+    active_json=$("$_HYPRCTL" activewindow -j 2>/dev/null)
+    active_address=$(echo "$active_json" | jq -r '.address // empty')
+
+    if [[ -z "$active_address" || "$active_address" == "0x" ]]; then
+        exit 0
+    fi
+
+    active_workspace=$(echo "$active_json" | jq -r '.workspace.id')
+
+    next_address=$(
+        "$_HYPRCTL" clients -j 2>/dev/null |
+            jq -r --argjson ws "$active_workspace" \
+                '[.[] | select(.workspace.id == $ws and .focusHistoryID > 0)]
+             | sort_by(.focusHistoryID)
+             | first
+             | .address // empty'
+    )
+
+    active_fullscreen=$(echo "$active_json" | jq -r '.fullscreen // 0')
+
+    "$_HYPRCTL" dispatch "hl.dsp.window.close({window='address:$active_address'})"
+
+    max_attempts=20
+    attempt=0
+    while "$_HYPRCTL" clients -j 2>/dev/null | jq -e --arg addr "$active_address" \
+        '.[] | select(.address == $addr)' >/dev/null 2>&1; do
+        sleep 0.05
+        attempt=$((attempt + 1))
+        if [[ $attempt -ge $max_attempts ]]; then
+            break
+        fi
+    done
+
+    if [[ -z "$next_address" || "$next_address" == "null" ]]; then
+        next_address=$(
+            "$_HYPRCTL" clients -j 2>/dev/null |
+                jq -r --argjson ws "$active_workspace" \
+                    '[.[] | select(.workspace.id == $ws)] | first | .address // empty'
+        )
+    fi
+
+    if [[ -z "$next_address" || "$next_address" == "null" || "$next_address" == "0x" ]]; then
+        exit 0
+    fi
+
+    "$_HYPRCTL" dispatch "hl.dsp.focus({window='address:$next_address'})"
+    if [[ "$active_fullscreen" != "0" ]]; then
+        "$_HYPRCTL" dispatch 'hl.dsp.window.fullscreen_state({internal=2, client=0, action="set"})'
+    fi
+    ;;
+
+# -----------------------------------------------------------------------
+switch)
+    entries=()
+    addresses=()
+
+    while IFS=$'\t' read -r id class title ws_id; do
+        entries+=("$ws_id	$class	$id	$title")
+    done < <(
+        "$_HYPRCTL" clients -j |
+            jq -r '.[] | [.address, .class, (.title // .class), (.workspace.id|tostring)] | @tsv'
+    )
+
+    if [[ ${#entries[@]} -eq 0 ]]; then
+        exit 0
+    fi
+
+    mapfile -t entries < <(printf '%s\n' "${entries[@]}" | sort -t $'\t' -k1,1n -k2,2)
+
+    tmp=$(mktemp)
+    trap 'rm -f "$tmp"' EXIT
+
+    for e in "${entries[@]}"; do
+        IFS=$'\t' read -r _ws_id class id title <<<"$e"
+        addresses+=("$id")
+        printf '%s\0icon\x1f%s\n' "$title" "${class,,}" >> "$tmp"
+    done
+
+    result=$(fuzzel -d --y 10 -w 40 -p "" --index < "$tmp")
+
+    if [[ -n $result && $result != "-1" ]]; then
+        target_address="${addresses[result]}"
+        target_fullscreen=$("$_HYPRCTL" clients -j | jq -r --arg addr "$target_address" '.[] | select(.address == $addr) | .fullscreen')
+
+        "$_HYPRCTL" dispatch "hl.dsp.focus({window='address:$target_address'})"
+
+        if [[ "$target_fullscreen" == "0" || "$target_fullscreen" == "false" ]]; then
+            "$_HYPRCTL" dispatch 'hl.dsp.window.fullscreen_state({internal=2, client=0, action="set"})'
+        fi
+    fi
+    ;;
+
+# -----------------------------------------------------------------------
+*)
+    exec "$_HYPRCTL" "$@"
+    ;;
+esac

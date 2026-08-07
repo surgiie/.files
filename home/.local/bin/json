@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# json - custom json utilities
+#
+# Subcommands:
+#   pipe - pipe json strings through jq, passing non-json lines through
+# -----------------------------------------------------------------------
+
+case "$1" in
+
+# -----------------------------------------------------------------------
+pipe)
+    jq -Rr --indent 2 '
+        . as $line |
+        ($line | index("{")) as $i |
+        if $i == null then $line
+        elif $i > 0 then ($line[:$i] | rtrimstr(" ")), (try ($line[$i:] | fromjson) catch empty)
+        else (try ($line | fromjson) catch empty)
+        end
+    '
+    ;;
+
+# -----------------------------------------------------------------------
+*)
+    echo "Usage: json <subcommand>"
+    echo
+    echo "Subcommands:"
+    echo "  pipe  - pipe json strings through jq, passing non-json lines through unchanged"
+    exit 1
+    ;;
+esac

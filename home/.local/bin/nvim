@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# nvim - wrapper around nvim that adds custom subcommands.
+#
+# Custom subcommands:
+#   scratch      - open a temporary nvim instance in a new wezterm tab,
+#                  copy content to clipboard on exit
+#   url-handler  - handle nvim:// protocol URLs
+# -----------------------------------------------------------------------
+
+_NVIM=$(PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "$(dirname "$0")" | tr '\n' ':') command -v nvim)
+
+case "$1" in
+
+# -----------------------------------------------------------------------
+scratch)
+    tmpfile=$(mktemp /tmp/nvim-scratch-XXXXXX)
+
+    echo "wezterm=$(command -v wezterm) PATH=$PATH" >> /tmp/nvim-scratch-debug.log
+    wezterm tab --close-on-exit --wait-for-exit --focus-previous nvim "$tmpfile"
+
+    if [[ -s "$tmpfile" ]]; then
+        wl-copy < "$tmpfile"
+    fi
+    rm "$tmpfile"
+    ;;
+
+# -----------------------------------------------------------------------
+url-handler)
+    shift
+    url="${1-}"
+
+    if [[ -z "$url" ]]; then
+        echo "Usage: nvim url-handler <nvim://...>" >&2
+        exit 1
+    fi
+
+    # Strip scheme and query string
+    path="${url#nvim://}"
+    path="${path%%\?*}"
+
+    # Drop "file" host component (nvim://file/path → /path)
+    [[ "$path" == file/* ]] && path="${path#file}"
+
+    col=""
+    line=""
+
+    if [[ "$path" =~ ^(.*):([0-9]+):([0-9]+)$ ]]; then
+        path="${BASH_REMATCH[1]}"
+        line="${BASH_REMATCH[2]}"
+        col="${BASH_REMATCH[3]}"
+    elif [[ "$path" =~ ^(.*):([0-9]+)$ ]]; then
+        path="${BASH_REMATCH[1]}"
+        line="${BASH_REMATCH[2]}"
+    fi
+
+    if [[ -z "$path" ]]; then
+        echo "nvim url-handler: no path in URL '$url'" >&2
+        exit 1
+    fi
+
+    if [[ -d "$path" ]]; then
+        cwd="$path"
+    else
+        cwd="$(dirname "$path")"
+    fi
+
+    cmd=(nvim "$path")
+
+    if [[ -n "$line" && -n "$col" ]]; then
+        cmd=(nvim "+call cursor($line,$col)" "$path")
+    elif [[ -n "$line" ]]; then
+        cmd=(nvim "+$line" "$path")
+    fi
+
+    exec wezterm tab -- bash -lc "cd $(printf '%q' "$cwd") && exec ${cmd[*]}"
+    ;;
+
+# -----------------------------------------------------------------------
+*)
+    exec "$_NVIM" "$@"
+    ;;
+esac

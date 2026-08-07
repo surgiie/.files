@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# jq - wrapper around jq that adds custom subcommands.
+#
+# Custom subcommands:
+#   interactive  - interactively filter JSON input with jq via fzf
+# -----------------------------------------------------------------------
+
+_JQ=$(PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "$(dirname "$0")" | tr '\n' ':') command -v jq)
+
+case "$1" in
+
+# -----------------------------------------------------------------------
+interactive)
+    tmp=$(mktemp)
+    trap 'rm -f "$tmp"' EXIT
+    cat > "$tmp"
+
+    filter=$(fzf \
+        --prompt="jq> " \
+        --print-query \
+        --no-sort \
+        --disabled \
+        --bind="ctrl-right:forward-char,ctrl-left:backward-char" \
+        --ansi \
+        --bind="change:preview(jq -C {q} \"$tmp\" 2>&1 || true)" \
+        --preview="jq -C {q} \"$tmp\" 2>&1 || true" \
+        --height=100% \
+        --preview-window=right:80%:wrap \
+        --query='.' \
+        < /dev/null \
+        | head -1)
+
+    [[ -z "$filter" ]] && exit 0
+
+    "$_JQ" "$filter" "$tmp"
+    ;;
+
+# -----------------------------------------------------------------------
+*)
+    exec "$_JQ" "$@"
+    ;;
+esac

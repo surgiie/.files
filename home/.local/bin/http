@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# http - http utilities
+#
+# Subcommands:
+#   stress - stress test a URL with concurrent requests
+# -----------------------------------------------------------------------
+
+case "$1" in
+
+# -----------------------------------------------------------------------
+stress)
+    shift
+    set +m
+    url=""
+    max=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --url)  url="$2";  shift 2 ;;
+        --rate) max="$2";  shift 2 ;;
+        *) echo "Unknown option: $1"; echo "Usage: http stress --url <url> --rate <n>"; exit 1 ;;
+        esac
+    done
+
+    [[ -z "$url" || -z "$max" ]] && {
+        echo "Usage: http stress --url <url> --rate <n>"
+        exit 1
+    }
+
+    BOLD="\e[1m"
+    RESET="\e[0m"
+    GREEN="\e[32m"
+    RED="\e[31m"
+    DIM="\e[2m"
+
+    printf "\n${BOLD}Started:${RESET} $(date)\n\n"
+    printf " %-12s │ %-6s │ %s\n" "Time" "Status" "Response Time"
+    printf "─%.0s" {1..14}; printf "┼"; printf "─%.0s" {1..8}; printf "┼"; printf "─%.0s" {1..14}; printf "\n"
+
+    START=$(date +%s)
+    total=0
+    ok=0
+    err=0
+    tmpdir=$(mktemp -d)
+
+    get() {
+        local out code time color
+        out=$(curl -sS -o /dev/null -w "%{http_code} %{time_total}" "$1" 2>/dev/null)
+        code=$(awk '{print $1}' <<< "$out")
+        time=$(awk '{printf "%.3fs", $2}' <<< "$out")
+
+        if [[ "$code" =~ ^2 ]]; then
+            color="$GREEN"
+            echo "ok" >> "$tmpdir/results"
+        else
+            color="$RED"
+            echo "err" >> "$tmpdir/results"
+        fi
+
+        printf " %-12s │ ${color}%-6s${RESET} │ %s\n" "$(date +'%H:%M:%S')" "$code" "$time"
+    }
+
+    while true; do
+        elapsed=$(($(date +%s) - START))
+        rm -f "$tmpdir/results"
+
+        for _ in $(seq 1 "$max"); do
+            get "$url" &
+        done
+        wait
+
+        batch_ok=$(grep -c "^ok$"  "$tmpdir/results" 2>/dev/null || echo 0)
+        batch_err=$(grep -c "^err$" "$tmpdir/results" 2>/dev/null || echo 0)
+        total=$((total + max))
+        ok=$((ok + batch_ok))
+        err=$((err + batch_err))
+
+        elapsed_fmt=$(printf "%02d:%02d" $((elapsed / 60)) $((elapsed % 60)))
+        printf "${DIM} ── %s elapsed ── %d sent, %d ok, %d err ──${RESET}\n" \
+            "$elapsed_fmt" "$total" "$ok" "$err"
+
+        sleep 1
+    done
+    ;;
+
+# -----------------------------------------------------------------------
+*)
+    echo "Usage: http <subcommand>"
+    echo
+    echo "Subcommands:"
+    echo "  stress  - stress test a URL with concurrent requests"
+    exit 1
+    ;;
+esac

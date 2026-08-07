@@ -6,6 +6,7 @@ export VISUAL=nvim
 export GIT_EDITOR=nvim
 export EDITOR="$VISUAL"
 export DOCKER_CLI_HINTS=false
+export GH_DASH_CONFIG="$HOME/.config/gh-dash/config.yml"
 export PROJECTS="$HOME/projects"
 export PATH="$HOME/bin:$PATH"
 export PATH="/usr/local/bin:$PATH"
@@ -134,7 +135,7 @@ setopt EXTENDED_HISTORY
 # -------------------------------------------------------------------------
 # Aliases
 # -------------------------------------------------------------------------
-alias k="kubecolor"
+alias k="kubectl"
 alias sudo='sudo -E env "PATH=$PATH"'
 alias cat="bat -p"
 alias forgit="git-forgit"
@@ -223,7 +224,7 @@ _json_pipe() {
     shift words
     _normal
 }
-compdef _json_pipe json:pipe
+compdef _json_pipe json
 
 # -------------------------------------------------------------------------
 # fzf-tab (wraps all zsh completions with fzf, must come after compinit)

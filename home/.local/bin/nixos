@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------
+# nixos - nixos utilities
+#
+# Subcommands:
+#   sync  - rebuild nixos config and optionally clean up old generations
+# -----------------------------------------------------------------------
+
+case "$1" in
+
+# -----------------------------------------------------------------------
+sync)
+    shift
+    if [ ! -f "$HOME/nixos-host" ]; then
+        echo "❌ ERROR: Please write your nixos host name to $HOME/nixos-host" >&2
+        exit 1
+    fi
+    host="$(cat "$HOME/nixos-host")"
+    dotfiles_dir="$HOME/.files"
+
+    sudo_arg="--use-remote-sudo"
+    if nixos-rebuild --help 2>/dev/null | grep -q -- '--sudo'; then
+        sudo_arg="--sudo"
+    fi
+
+    if ! nixos-rebuild switch --flake "path:$dotfiles_dir#$host" "$sudo_arg" "$@"; then
+        echo "NixOS rebuild failed."
+        exit 1
+    fi
+
+    read -r -p "Rebuild successful. Do you want to clean up old generations? [y/N] " ans
+    if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
+        sudo nix-collect-garbage -d
+    fi
+
+    if command -v update-desktop-database &>/dev/null; then
+        update-desktop-database "$HOME/.local/share/applications/"
+    fi
+    ;;
+
+# -----------------------------------------------------------------------
+*)
+    echo "Usage: nixos <subcommand>"
+    echo
+    echo "Subcommands:"
+    echo "  sync  - rebuild nixos config and optionally clean up old generations"
+    exit 1
+    ;;
+esac

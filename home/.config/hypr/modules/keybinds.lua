@@ -32,7 +32,7 @@ hl.bind(
 	)
 )
 hl.bind(mainMod .. " + A", exec(menu))
-hl.bind(mainMod .. " + V", exec("nvim-scratch"))
+hl.bind(mainMod .. " + V", exec("/tmp/test-nvim-scratch.sh"))
 
 -- ── Windows ───────────────────────────────────────────────────────────────────
 hl.bind(mainMod .. " + backspace", function()
@@ -45,9 +45,9 @@ hl.bind(mainMod .. " + backspace", function()
 	end, { timeout = 50, type = "oneshot" })
 end)
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen_state({ internal = 2, client = 0, action = "toggle" }))
-hl.bind(mainMod .. " + Q", exec("hyprclose"))
-hl.bind(mainMod .. " + Tab", exec("hyprselect"))
-hl.bind("ALT + Tab", exec("hyprselect"))
+hl.bind(mainMod .. " + Q", exec("hypr close"))
+hl.bind(mainMod .. " + Tab", exec("hypr switch"))
+hl.bind("ALT + Tab", exec("hypr switch"))
 
 -- ── Focus ─────────────────────────────────────────────────────────────────────
 hl.bind(mainMod .. " + H", hl.dsp.focus({ direction = "left" }))

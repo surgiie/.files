@@ -46,10 +46,10 @@ echo "Saved git config to ~/.gitconfig_local"
 echo "$host" >"$HOME/nixos-host"
 echo "Wrote host to $HOME/nixos-host"
 
-# Enter nix shell with git and run nixos-sync
-echo "Entering nix-shell to run nixos-sync..."
-chmod u+x "$HOME/.files/home/.local/bin/nixos-sync"
-nix-shell -p git --run "git config --global user.name $name && git config --global user.email $email && $HOME/.files/home/.local/bin/nixos-sync"
+# Enter nix shell with git and run nixos sync
+echo "Entering nix-shell to run nixos sync..."
+chmod u+x "$HOME/.files/home/.local/bin/nixos"
+nix-shell -p git --run "git config --global user.name $name && git config --global user.email $email && $HOME/.files/home/.local/bin/nixos sync"
 rm -f "$HOME/.gitconfig"
 # Remove default nixos config files
 echo "Removing default /etc/nixos/* files..."
