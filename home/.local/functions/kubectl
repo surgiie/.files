@@ -1,0 +1,403 @@
+kubectl() {
+    local _KUBECTL=/run/current-system/sw/bin/kubectl
+    local _KUBECOLOR
+    _KUBECOLOR=$(command -v kubecolor 2>/dev/null || echo "$_KUBECTL")
+
+    local RESET='\033[0m' BOLD='\033[1m' DIM='\033[2m'
+    local RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
+    local CYAN='\033[0;36m' MAGENTA='\033[0;35m'
+
+    _kubectl_info()    { printf '%b  ●%b %s\n' "$CYAN"   "$RESET" "$*"; }
+    _kubectl_success() { printf '%b  ✔%b %s\n' "$GREEN"  "$RESET" "$*"; }
+    _kubectl_warn()    { printf '%b  ⚠%b %s\n' "$YELLOW" "$RESET" "$*"; }
+    _kubectl_error()   { printf '%b  ✖%b %s\n' "$RED"    "$RESET" "$*"; }
+
+    _pick_pod() {
+        local prompt="${1:-pod}"
+        shift
+        "$_KUBECTL" get pods "$@" --no-headers \
+            -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name' |
+            fzf --prompt="$prompt> " |
+            awk '{print $1"/"$2}'
+    }
+
+    case "$1" in
+    get)
+        local resource="${2:-}"
+        case "$resource" in
+        secret | secrets)
+            local decode=false filtered_args=()
+            for arg in "${@:3}"; do
+                [[ "$arg" == "--decode" ]] && decode=true || filtered_args+=("$arg")
+            done
+            if [[ "$decode" == true ]]; then
+                local secret_name="${filtered_args[0]:-}"
+                if [[ -z "$secret_name" ]]; then
+                    echo "Usage: kubectl get secret <name> [kubectl flags...] --decode" >&2
+                    return 1
+                fi
+                local extra_flags=("${filtered_args[@]:1}")
+                "$_KUBECTL" get secret "$secret_name" "${extra_flags[@]}" -o json |
+                    jq -r '.data | to_entries[] | .key + ": " + (.value | @base64d)'
+            else
+                "$_KUBECOLOR" "$@"
+            fi
+            ;;
+        *)
+            local query=false filtered_args=()
+            for arg in "${@:2}"; do
+                [[ "$arg" == "--jq" ]] && query=true || filtered_args+=("$arg")
+            done
+            if [[ "$query" == true ]]; then
+                "$_KUBECTL" get "${filtered_args[@]}" -o json | jq interactive
+            else
+                local extra_args=("${@:3}")
+                local wide_resources="pod pods nodes node deployment deployments service services"
+                if [[ " $wide_resources " == *" $resource "* ]] && [[ ${#extra_args[@]} -eq 0 ]]; then
+                    "$_KUBECOLOR" "$@" -o wide
+                else
+                    "$_KUBECOLOR" "$@"
+                fi
+            fi
+            ;;
+        esac
+        ;;
+    delete)
+        shift
+        if [[ $# -ge 2 ]]; then
+            "$_KUBECTL" delete "$@"
+        elif [[ $# -eq 1 ]]; then
+            local resource_type="$1" resource_name
+            resource_name=$("$_KUBECTL" get "$resource_type" --no-headers \
+                -o custom-columns=":metadata.name" 2>/dev/null |
+                fzf --prompt="$resource_type> ")
+            [[ -z "$resource_name" ]] && return 0
+            "$_KUBECTL" delete "$resource_type" "$resource_name"
+        else
+            local resource_type resource_name
+            resource_type=$("$_KUBECTL" api-resources --verbs=delete --no-headers -o name 2>/dev/null |
+                fzf --prompt="resource type> ")
+            [[ -z "$resource_type" ]] && return 0
+            resource_name=$("$_KUBECTL" get "$resource_type" --no-headers \
+                -o custom-columns=":metadata.name" 2>/dev/null |
+                fzf --prompt="$resource_type> ")
+            [[ -z "$resource_name" ]] && return 0
+            "$_KUBECTL" delete "$resource_type" "$resource_name"
+        fi
+        ;;
+    events)
+        shift
+        local extra_flags=() for_value=""
+        while [[ "$#" -gt 0 ]]; do
+            case "$1" in
+            --for) for_value="${2:?--for requires a value}"; shift 2 ;;
+            *)     extra_flags+=("$1"); shift ;;
+            esac
+        done
+        if [[ -z "$for_value" ]]; then
+            for_value=$("$_KUBECTL" get events "${extra_flags[@]}" --no-headers \
+                -o custom-columns=":involvedObject.name" 2>/dev/null |
+                sort -u | fzf --prompt="events for> ")
+            [[ -z "$for_value" ]] && return 0
+        fi
+        "$_KUBECTL" get events "${extra_flags[@]}" \
+            --sort-by='.lastTimestamp' \
+            -o json |
+            jq -r --arg val "$for_value" '
+                .items[]
+                | select(.involvedObject.name | contains($val))
+                | [.lastTimestamp, .type, (.involvedObject.kind + "/" + .involvedObject.name), .reason, .message]
+                | @tsv
+            ' | column -t -s $'\t'
+        ;;
+    logs)
+        shift
+        local monitor=false pattern="" log_file="" resource_type="pod" delete_resource=false interval=5
+        local kubectl_flags=() log_flags=()
+
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+            --monitor | -m) monitor=true ;;
+            --resource | -r) resource_type="$2"; shift ;;
+            --namespace | -n) kubectl_flags+=("-n" "$2"); shift ;;
+            --selector | -l) kubectl_flags+=("-l" "$2"); shift ;;
+            --pattern | -p) pattern="$2"; shift ;;
+            --log-file) log_file="$2"; shift ;;
+            --interval | -i) interval="$2"; shift ;;
+            --tail | -t) log_flags+=("--tail=$2"); shift ;;
+            --delete | -d) delete_resource=true ;;
+            --since | -s)
+                local since_time
+                since_time=$(date -u -d "$2 ago" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null) ||
+                    since_time=$(date -u -v "-$2" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null) || {
+                    echo "Invalid --since value: '$2'. Use a duration like: '5 minutes', '2 hours', '1 day'."
+                    return 1
+                }
+                log_flags+=("--since-time=$since_time")
+                shift
+                ;;
+            -h | --help)
+                echo "Stream or monitor logs for a kubernetes resource."
+                echo
+                echo "Usage:"
+                echo "    kubectl logs [options]"
+                echo
+                echo "Options:"
+                echo "    -h, --help                   Display command help."
+                echo "    -m, --monitor                Poll logs for a pattern instead of streaming."
+                echo "    -r, --resource <type>        Resource type (default: pod). Monitor mode only."
+                echo "    -n, --namespace <ns>         Namespace to query resources in."
+                echo "    -l, --selector <selector>    Label selector to filter resources. Monitor mode only."
+                echo "    -p, --pattern  <pattern>     Pattern to grep for. Required in monitor mode."
+                echo "    -i, --interval <seconds>     Poll interval in seconds (default: 5). Monitor mode only."
+                echo "        --log-file <path>        Append matched resource names to this file. Monitor mode only."
+                echo "    -s, --since <duration>       Only return logs newer than this duration from now."
+                echo "    -t, --tail <lines>           Limit log output to the last N lines."
+                echo "    -d, --delete                 Delete the resource when the pattern is found. Monitor mode only."
+                return 0
+                ;;
+            *) break ;;
+            esac
+            shift
+        done
+
+        if [[ "$monitor" == true ]]; then
+            [[ -z "$pattern" ]] && { echo "--pattern is required for --monitor mode"; return 1; }
+            if [[ -n "$log_file" && -f "$log_file" ]]; then
+                echo "Log file already exists: $log_file — remove it before running."
+                return 1
+            fi
+
+            printf '%b%bkubectl logs --monitor%b  %bCtrl+C to stop%b\n' "$BOLD" "$MAGENTA" "$RESET" "$DIM" "$RESET"
+            printf '%b  resource    : %b%b%s%b\n' "$DIM" "$RESET" "$CYAN" "$resource_type" "$RESET"
+            printf '%b  pattern     : %b%b%s%b\n' "$DIM" "$RESET" "$CYAN" "$pattern" "$RESET"
+            printf '%b  interval    : %b%b%ss%b\n' "$DIM" "$RESET" "$CYAN" "$interval" "$RESET"
+            [[ ${#kubectl_flags[@]} -gt 0 ]] && printf '%b  kubectl args: %b%b%s%b\n' "$DIM" "$RESET" "$CYAN" "${kubectl_flags[*]}" "$RESET"
+            [[ ${#log_flags[@]} -gt 0 ]]    && printf '%b  log args    : %b%b%s%b\n' "$DIM" "$RESET" "$CYAN" "${log_flags[*]}"    "$RESET"
+            [[ -n "$log_file" ]]             && printf '%b  log-file    : %b%b%s%b\n' "$DIM" "$RESET" "$CYAN" "$log_file"          "$RESET"
+            printf "\n"
+
+            [[ -n "$log_file" ]] && touch "$log_file"
+
+            while true; do
+                local timestamp cols dashes
+                timestamp="$(date '+%H:%M:%S')"
+                cols=$(tput cols 2>/dev/null || echo 80)
+                dashes=$(printf '─%.0s' $(seq 1 $(( cols - ${#timestamp} - 4 ))))
+                printf '%b── %s %s%b\n' "$DIM" "$timestamp" "$dashes" "$RESET"
+
+                local resources
+                resources=$("$_KUBECTL" get "$resource_type" "${kubectl_flags[@]}" --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
+
+                if [[ -z "$resources" ]]; then
+                    _kubectl_warn "No ${resource_type}s found."
+                    sleep "$interval"
+                    continue
+                fi
+
+                local matched_any=false
+                while IFS= read -r resource; do
+                    [[ -z "$resource" ]] && continue
+                    printf '%b  ●%b Checking %s\n' "$CYAN" "$RESET" "$resource"
+                    local logs
+                    logs=$(timeout 10 "$_KUBECTL" logs "$resource_type/$resource" "${kubectl_flags[@]}" "${log_flags[@]}" 2>/dev/null)
+
+                    if echo "$logs" | grep -q -E "$pattern"; then
+                        printf "\033[1A\033[2K"
+                        _kubectl_success "$resource — pattern matched"
+                        matched_any=true
+                        [[ -n "$log_file" ]] && { grep -q "$resource" "$log_file" || echo "$resource" >> "$log_file"; }
+                        if [[ "$delete_resource" == true ]]; then
+                            local output
+                            if ! output=$("$_KUBECTL" delete "$resource_type" "$resource" "${kubectl_flags[@]}" 2>&1); then
+                                _kubectl_error "Failed to delete $resource: $output"
+                            else
+                                _kubectl_success "Deleted $resource"
+                            fi
+                        fi
+                    else
+                        printf "\033[1A\033[2K"
+                    fi
+                done <<< "$resources"
+
+                [[ "$matched_any" == false ]] && _kubectl_warn "No resources matched log pattern '$pattern' for this interval."
+                sleep "$interval"
+            done
+        elif [[ $# -gt 0 ]]; then
+            "$_KUBECTL" logs "$@" "${log_flags[@]}"
+        else
+            local selection ns pod container
+            selection=$(_pick_pod "pod" -A)
+            [[ -z "$selection" ]] && return 0
+            ns="${selection%%/*}"
+            pod="${selection##*/}"
+            kubectl_flags+=("-n" "$ns")
+            container=$("$_KUBECTL" get pod "$pod" "${kubectl_flags[@]}" \
+                -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}' |
+                fzf --prompt="container> ")
+            [[ -z "$container" ]] && return 0
+            "$_KUBECTL" logs -f "$pod" -c "$container" "${kubectl_flags[@]}" "${log_flags[@]}"
+        fi
+        ;;
+    containers)
+        shift
+        if [[ -n "${1:-}" ]]; then
+            "$_KUBECTL" get pod "$@" -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'
+        else
+            local selection ns pod
+            selection=$(_pick_pod "pod" -A)
+            [[ -z "$selection" ]] && return 0
+            ns="${selection%%/*}"
+            pod="${selection##*/}"
+            "$_KUBECTL" get pod "$pod" -n "$ns" -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'
+        fi
+        ;;
+    clone)
+        shift
+        local run_as_root=false kubectl_flags=() pod="" run_as_user=""
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+            --root) run_as_root=true ;;
+            --namespace | -n) kubectl_flags+=("-n" "$2"); shift ;;
+            *) break ;;
+            esac
+            shift
+        done
+        if [[ -n "${1:-}" ]]; then
+            pod="$1"; shift
+        else
+            local selection ns
+            selection=$(_pick_pod "clone pod" -A)
+            [[ -z "$selection" ]] && return 0
+            ns="${selection%%/*}"
+            pod="${selection##*/}"
+            kubectl_flags+=("-n" "$ns")
+        fi
+        [[ "$run_as_root" == true ]] && run_as_user='| .spec.containers[0].securityContext.runAsUser = 0'
+        "$_KUBECTL" get pod "$pod" "${kubectl_flags[@]}" -o yaml |
+            kubectl neat |
+            yq "
+                .metadata.name = \"clone-$pod\" |
+                del(.metadata.ownerReferences) |
+                del(.metadata.labels) |
+                .spec.restartPolicy = \"Never\" |
+                .spec.containers[0].command = [\"sleep\",\"infinity\"]
+                $run_as_user
+            " |
+            "$_KUBECTL" apply "${kubectl_flags[@]}" -f -
+        ;;
+    exec)
+        shift
+        if [[ $# -gt 0 ]]; then
+            "$_KUBECTL" exec -it "$@"
+        else
+            local kubectl_flags=() selection ns pod container
+            selection=$(_pick_pod "exec pod" -A)
+            [[ -z "$selection" ]] && return 0
+            ns="${selection%%/*}"
+            pod="${selection##*/}"
+            kubectl_flags+=("-n" "$ns")
+            container=$("$_KUBECTL" get pod "$pod" "${kubectl_flags[@]}" \
+                -o jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}' |
+                fzf --prompt="container> ")
+            [[ -z "$container" ]] && return 0
+            "$_KUBECTL" exec -it "$pod" -c "$container" "${kubectl_flags[@]}" -- sh
+        fi
+        ;;
+    describe)
+        shift
+        local kubectl_flags=()
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+            --namespace | -n) kubectl_flags+=("-n" "$2"); shift 2 ;;
+            *) break ;;
+            esac
+        done
+        if [[ $# -ge 2 ]]; then
+            "$_KUBECTL" describe "$@" "${kubectl_flags[@]}"
+        elif [[ $# -eq 1 ]]; then
+            local resource_type="$1" resource_name
+            resource_name=$("$_KUBECTL" get "$resource_type" "${kubectl_flags[@]}" \
+                --no-headers -o custom-columns=":metadata.name" |
+                fzf --prompt="$resource_type> ")
+            [[ -z "$resource_name" ]] && return 0
+            "$_KUBECTL" describe "$resource_type" "$resource_name" "${kubectl_flags[@]}"
+        else
+            local resource_type resource_name
+            resource_type=$(printf 'pod\ndeployment\nservice\nconfigmap\nsecret\nstatefulset\ndaemonset\njob\ncronjob\ningress\nreplicaset\nserviceaccount\npersistentvolumeclaim\n' |
+                fzf --prompt="resource type> ")
+            [[ -z "$resource_type" ]] && return 0
+            resource_name=$("$_KUBECTL" get "$resource_type" "${kubectl_flags[@]}" \
+                --no-headers -o custom-columns=":metadata.name" |
+                fzf --prompt="$resource_type> ")
+            [[ -z "$resource_name" ]] && return 0
+            "$_KUBECTL" describe "$resource_type" "$resource_name" "${kubectl_flags[@]}"
+        fi
+        ;;
+    rollout)
+        shift
+        case "${1:-}" in
+        undo)
+            shift
+            local kubectl_flags=() deployment="" revision
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                --namespace | -n) kubectl_flags+=("-n" "$2"); shift 2 ;;
+                *) deployment="$1"; shift ;;
+                esac
+            done
+            if [[ -z "$deployment" ]]; then
+                deployment=$("$_KUBECTL" get deployments "${kubectl_flags[@]}" \
+                    --no-headers -o custom-columns=":metadata.name" |
+                    fzf --prompt="deployment> ")
+                [[ -z "$deployment" ]] && return 0
+            fi
+            revision=$("$_KUBECTL" rollout history deployment "$deployment" "${kubectl_flags[@]}" |
+                tail -n +3 | fzf --prompt="revision> " --tac | awk '{print $1}')
+            [[ -z "$revision" ]] && return 0
+            "$_KUBECTL" rollout undo deployment "$deployment" "${kubectl_flags[@]}" --to-revision="$revision"
+            ;;
+        *)
+            "$_KUBECTL" rollout "$@"
+            ;;
+        esac
+        ;;
+    context)
+        local ctx
+        ctx=$("$_KUBECTL" config get-contexts --no-headers -o name | fzf --prompt="context> ")
+        [[ -z "$ctx" ]] && return 0
+        "$_KUBECTL" config use-context "$ctx"
+        ;;
+    namespace)
+        local ns
+        ns=$("$_KUBECTL" get namespaces --no-headers -o custom-columns=":metadata.name" | fzf --prompt="namespace> ")
+        [[ -z "$ns" ]] && return 0
+        "$_KUBECTL" config set-context --current --namespace="$ns"
+        ;;
+    port-forward)
+        shift
+        if [[ $# -gt 0 ]]; then
+            "$_KUBECTL" port-forward "$@"
+        else
+            local kubectl_flags=() selection ns pod ports local_port
+            selection=$(_pick_pod "port-forward" -A)
+            [[ -z "$selection" ]] && return 0
+            ns="${selection%%/*}"
+            pod="${selection##*/}"
+            kubectl_flags+=("-n" "$ns")
+            ports=$("$_KUBECTL" get pod "$pod" "${kubectl_flags[@]}" \
+                -o jsonpath='{range .spec.containers[*].ports[*]}{.containerPort}{"\n"}{end}' |
+                sort -un | fzf --prompt="container port> ")
+            [[ -z "$ports" ]] && return 0
+            printf "local port (default: %s): " "$ports"
+            read -r local_port
+            local_port="${local_port:-$ports}"
+            _kubectl_info "Forwarding $local_port → $ports on $pod"
+            "$_KUBECTL" port-forward "pod/$pod" "${kubectl_flags[@]}" "$local_port:$ports"
+        fi
+        ;;
+    *)
+        "$_KUBECOLOR" "$@"
+        ;;
+    esac
+}

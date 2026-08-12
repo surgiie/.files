@@ -1,0 +1,6 @@
+bye() {
+    if [ -f "$HOME/shutdown" ]; then
+        source "$HOME/shutdown"
+    fi
+    shutdown now
+}

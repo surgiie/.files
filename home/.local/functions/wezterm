@@ -1,0 +1,89 @@
+wezterm() {
+    local _WEZTERM=/run/current-system/sw/bin/wezterm
+
+    case "$1" in
+    tab)
+        shift
+        local print_pane_id=false close_on_exit=false wait_for_exit=false focus_previous=false prev_window=""
+
+        while [[ "$#" -gt 0 ]]; do
+            case "${1-}" in
+            --print-pane-id)  print_pane_id=true;  shift ;;
+            --close-on-exit)  close_on_exit=true;  shift ;;
+            --wait-for-exit)  wait_for_exit=true;  shift ;;
+            --focus-previous) focus_previous=true; shift ;;
+            --) shift; break ;;
+            -*) echo "unknown option: $1" >&2; return 1 ;;
+            *)  break ;;
+            esac
+        done
+
+        if [[ "$#" -eq 0 ]]; then
+            echo "Usage: wezterm tab [--print-pane-id] [--close-on-exit] [--wait-for-exit] [--focus-previous] <command> [args...]" >&2
+            return 1
+        fi
+
+        [[ "$focus_previous" == true ]] && prev_window=$(hyprctl activewindow -j | jq -r '.address')
+
+        local shell_path=${SHELL:-/bin/sh}
+        local cwd=${PWD:-$HOME}
+        local command_string
+        printf -v command_string '%q ' "$@"
+        command_string=${command_string% }
+        local shell_script="$command_string"
+        [[ "$close_on_exit" != true ]] && shell_script="$command_string; exec $shell_path -l"
+
+        _wezterm_restore_previous_window() {
+            [[ "$focus_previous" != true ]] && return
+            if [[ -n "$prev_window" && "$prev_window" != "null" ]]; then
+                hyprctl dispatch "hl.dsp.focus({window='address:$prev_window'})"
+                local fullscreen
+                fullscreen=$(hyprctl activewindow -j | jq -r '.fullscreen')
+                [[ "$fullscreen" == "0" ]] && \
+                    hyprctl dispatch 'hl.dsp.window.fullscreen_state({internal=2, client=0, action="set"})'
+            fi
+        }
+
+        local wezterm_window_id pane_id
+        wezterm_window_id=$("$_WEZTERM" cli list --format json 2>/dev/null | jq -r '.[0].window_id')
+
+        if [[ -n "$wezterm_window_id" && "$wezterm_window_id" != "null" ]]; then
+            pane_id=$("$_WEZTERM" cli spawn --cwd "$cwd" --window-id "$wezterm_window_id" -- "$shell_path" -lc "$shell_script")
+
+            local wezterm_address
+            wezterm_address=$(hyprctl clients -j | jq -r '.[] | select(.class == "org.wezfurlong.wezterm") | .address' | head -1)
+
+            if [[ -n "$wezterm_address" ]]; then
+                hyprctl dispatch "hl.dsp.focus({window='address:$wezterm_address'})"
+                local fullscreen
+                fullscreen=$(hyprctl activewindow -j | jq -r '.fullscreen')
+                [[ "$fullscreen" == "0" ]] && \
+                    hyprctl dispatch 'hl.dsp.window.fullscreen_state({internal=2, client=0, action="set"})'
+            fi
+
+            [[ "$print_pane_id" == true ]] && printf '%s\n' "$pane_id"
+
+            if [[ "$wait_for_exit" == true ]]; then
+                while "$_WEZTERM" cli list --format json 2>/dev/null | jq -e ".[] | select(.pane_id == $pane_id)" >/dev/null 2>&1; do
+                    sleep 0.1
+                done
+                _wezterm_restore_previous_window
+            fi
+            return 0
+        fi
+
+        local launch_command
+        printf -v launch_command '%q ' wezterm start --cwd "$cwd" -- "$shell_path" -lc "$shell_script"
+        launch_command=${launch_command% }
+        if [[ "$wait_for_exit" == true ]]; then
+            hyprtoggle --wait-for-exit --exec "$launch_command"
+            _wezterm_restore_previous_window
+        else
+            hyprtoggle --exec "$launch_command"
+        fi
+        ;;
+    *)
+        "$_WEZTERM" "$@"
+        ;;
+    esac
+}

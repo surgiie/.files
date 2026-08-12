@@ -1,0 +1,25 @@
+ssl() {
+    case "$1" in
+    cert:info)
+        shift
+        local host="" port=""
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+            --host) host="$2"; shift 2 ;;
+            --port) port="$2"; shift 2 ;;
+            *) echo "Unknown option: $1"; return 1 ;;
+            esac
+        done
+        [[ -z "$host" || -z "$port" ]] && { echo "Usage: ssl cert:info --host <host> --port <port>"; return 1; }
+        openssl s_client -connect "$host:$port" -servername "$host" </dev/null 2>/dev/null \
+            | openssl x509 -text -noout
+        ;;
+    *)
+        echo "Usage: ssl <subcommand>"
+        echo
+        echo "Subcommands:"
+        echo "  cert:info  - show certificate info for a host"
+        return 1
+        ;;
+    esac
+}

@@ -1,0 +1,31 @@
+yellow_bold() { printf "\e[1;33m%b\e[0m" "$*"; }
+
+warn() { printf "⚠️ WARN: %s\n" "$*" >&2; }
+
+error() { printf "❌ ERROR: %s\n" "$*" >&2; }
+
+confirm() {
+    local msg="${1:-Proceed?}"
+    read -r "ans?$msg [y/N] "
+    [[ "$ans" == "y" || "$ans" == "Y" ]]
+}
+
+ask_secret() {
+    local prompt="$1"
+    local input
+
+    read -s "input?$(yellow_bold '[INPUT]'): $prompt " >&2
+    echo >&2
+
+    echo "$input"
+}
+
+putenv() {
+    if [[ -z "$1" || -z "$2" ]]; then
+        echo "Usage: putenv VAR VALUE" >&2
+        return 1
+    fi
+    fc -p /dev/null 0 0
+    export "$1=$2"
+    fc -P
+}

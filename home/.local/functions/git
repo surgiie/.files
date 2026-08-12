@@ -1,0 +1,78 @@
+git() {
+    local _GIT=/run/current-system/sw/bin/git
+    local cmd="git-forgit"
+    [[ -n "$FORGIT" ]] && cmd="$FORGIT"
+
+    case "$1" in
+    recent)
+        "$_GIT" branch -r --sort=-committerdate --format="%(committerdate:relative)%09%(refname:short)"
+        ;;
+    rebase)
+        if [[ $# -gt 1 ]]; then
+            "$_GIT" "$@"
+        else
+            local base
+            base=$("$_GIT" log --oneline --decorate | fzf --prompt="rebase from> " | awk '{print $1}')
+            [[ -z "$base" ]] && return 0
+            "$_GIT" rebase -i "${base}^"
+        fi
+        ;;
+    compare)
+        local branch url
+        branch=$("$_GIT" branch --show-current)
+        url=$("$_GIT" config --get remote.origin.url | sed -Ee 's#(git@|git://)#https://#' -e 's@com:@com/@' -e 's/\.git$//')
+        (browse "$url/compare/$branch?expand=1" &>/dev/null &)
+        ;;
+    browse)
+        local branch url
+        branch=$("$_GIT" branch --show-current)
+        url=$("$_GIT" config --get remote.origin.url | sed -Ee 's#(git@|git://)#https://#' -e 's@com:@com/@' -e 's/\.git$//')
+        (browse "$url/tree/$branch" &>/dev/null &)
+        ;;
+    add)
+        if [[ $# -eq 1 ]]; then
+            $cmd add
+        else
+            shift
+            "$_GIT" add "$@"
+        fi
+        ;;
+    wip)
+        shift
+        local msg="${*:-wip}"
+        "$_GIT" add -A && "$_GIT" commit -m "wip: $msg" && "$_GIT" push
+        ;;
+    switch)
+        if [[ $# -gt 1 ]]; then
+            "$_GIT" "$@"
+        else
+            local branch
+            branch=$("$_GIT" branch --sort=-committerdate --format='%(refname:short)' | fzf --prompt='switch to> ')
+            [[ -n "$branch" ]] && "$_GIT" switch "$branch"
+        fi
+        ;;
+    cherry-pick)
+        if [[ $# -gt 1 ]]; then
+            "$_GIT" "$@"
+        else
+            local hash
+            hash=$("$_GIT" log --all --oneline | fzf --prompt='cherry-pick> ' | awk '{print $1}')
+            [[ -n "$hash" ]] && "$_GIT" cherry-pick "$hash"
+        fi
+        ;;
+    restore)
+        if [[ $# -gt 1 ]]; then
+            "$_GIT" "$@"
+        else
+            local file ref
+            file=$("$_GIT" ls-files | fzf --prompt='restore file> ')
+            [[ -z "$file" ]] && return 0
+            ref=$("$_GIT" log --oneline | fzf --prompt='restore from> ' | awk '{print $1}')
+            [[ -n "$ref" ]] && "$_GIT" restore --source="$ref" -- "$file"
+        fi
+        ;;
+    *)
+        "$_GIT" "$@"
+        ;;
+    esac
+}

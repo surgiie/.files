@@ -1,0 +1,51 @@
+nvim() {
+    local _NVIM=/run/current-system/sw/bin/nvim
+
+    case "$1" in
+    scratch)
+        local tmpfile
+        tmpfile=$(mktemp /tmp/nvim-scratch-XXXXXX)
+        wezterm tab --close-on-exit --wait-for-exit --focus-previous nvim "$tmpfile"
+        if [[ -s "$tmpfile" ]]; then
+            wl-copy < "$tmpfile"
+        fi
+        rm "$tmpfile"
+        ;;
+    url-handler)
+        shift
+        local url="${1-}"
+        if [[ -z "$url" ]]; then
+            echo "Usage: nvim url-handler <nvim://...>" >&2
+            return 1
+        fi
+
+        local path="${url#nvim://}"
+        path="${path%%\?*}"
+        [[ "$path" == file/* ]] && path="${path#file}"
+
+        local col="" line=""
+        if [[ "$path" =~ ^(.*):([0-9]+):([0-9]+)$ ]]; then
+            path="${BASH_REMATCH[1]}"; line="${BASH_REMATCH[2]}"; col="${BASH_REMATCH[3]}"
+        elif [[ "$path" =~ ^(.*):([0-9]+)$ ]]; then
+            path="${BASH_REMATCH[1]}"; line="${BASH_REMATCH[2]}"
+        fi
+
+        if [[ -z "$path" ]]; then
+            echo "nvim url-handler: no path in URL '$url'" >&2
+            return 1
+        fi
+
+        local cwd
+        [[ -d "$path" ]] && cwd="$path" || cwd="$(dirname "$path")"
+
+        local cmd=(nvim "$path")
+        [[ -n "$line" && -n "$col" ]] && cmd=(nvim "+call cursor($line,$col)" "$path")
+        [[ -n "$line" && -z "$col" ]] && cmd=(nvim "+$line" "$path")
+
+        wezterm tab -- bash -lc "cd $(printf '%q' "$cwd") && exec ${cmd[*]}"
+        ;;
+    *)
+        "$_NVIM" "$@"
+        ;;
+    esac
+}

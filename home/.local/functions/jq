@@ -1,0 +1,33 @@
+jq() {
+    local _JQ=/run/current-system/sw/bin/jq
+
+    case "$1" in
+    interactive)
+        local tmp filter
+        tmp=$(mktemp)
+        trap 'rm -f "$tmp"' RETURN
+        cat > "$tmp"
+
+        filter=$(fzf \
+            --prompt="jq> " \
+            --print-query \
+            --no-sort \
+            --disabled \
+            --bind="ctrl-right:forward-char,ctrl-left:backward-char" \
+            --ansi \
+            --bind="change:preview(jq -C {q} \"$tmp\" 2>&1 || true)" \
+            --preview="jq -C {q} \"$tmp\" 2>&1 || true" \
+            --height=100% \
+            --preview-window=right:80%:wrap \
+            --query='.' \
+            < /dev/null \
+            | head -1)
+
+        [[ -z "$filter" ]] && return 0
+        "$_JQ" "$filter" "$tmp"
+        ;;
+    *)
+        "$_JQ" "$@"
+        ;;
+    esac
+}

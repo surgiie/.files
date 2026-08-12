@@ -1,0 +1,11 @@
+hide_logo: true
+theme:
+  dark:
+    text: "#ffffff"
+    failure: "#ff5370"
+    warning: "#ffcb6b"
+    success: "#c3e88d"
+    secondary: "#ffcb6b"
+    primary: "#ffffff"
+    help: "#616161"
+    background: "#212121"

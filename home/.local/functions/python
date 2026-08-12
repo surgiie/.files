@@ -1,0 +1,12 @@
+python() {
+    local _PYTHON=/run/current-system/sw/bin/python
+
+    case "$1" in
+    venv)
+        "$_PYTHON" -m venv .venv --copies
+        ;;
+    *)
+        "$_PYTHON" "$@"
+        ;;
+    esac
+}

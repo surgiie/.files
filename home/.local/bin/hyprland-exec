@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Sources all shell functions and executes the given command — used by Hyprland
+# keybinds which run without an interactive shell session.
+for _f in "$HOME/.local/functions/"*; do source "$_f"; done
+unset _f
+"$@"

@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Browser with Focus
+Exec=/home/surgiie/.local/bin/browse %u
+MimeType=x-scheme-handler/unknown;x-scheme-handler/about;text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;

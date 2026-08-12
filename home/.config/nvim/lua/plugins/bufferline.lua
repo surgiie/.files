@@ -1,0 +1,85 @@
+return {
+	"akinsho/bufferline.nvim",
+	dependencies = {
+		"moll/vim-bbye",
+		"nvim-tree/nvim-web-devicons",
+	},
+	config = function()
+		local c = {
+			active_bg  = "#e2e2e2",
+			active_fg  = "#212121",
+			inactive_bg = "#2C2C2C",
+			inactive_fg = "#616161",
+			bar_bg     = "#212121",
+			modified   = "#ff9700",
+		}
+
+		require("bufferline").setup({
+			options = {
+				mode = "buffers",
+				themable = true,
+				numbers = "none",
+				close_command = "Bdelete! %d",
+				buffer_close_icon = "✗",
+				close_icon = "✗",
+				path_components = 1,
+				modified_icon = "●",
+				left_trunc_marker = "",
+				right_trunc_marker = "",
+				max_name_length = 20,
+				max_prefix_length = 15,
+				tab_size = 18,
+				diagnostics = false,
+				diagnostics_update_in_insert = false,
+				color_icons = true,
+				show_buffer_icons = true,
+				show_buffer_close_icons = true,
+				show_close_icon = false,
+				persist_buffer_sort = true,
+				separator_style = { "", "" },
+				enforce_regular_tabs = true,
+				always_show_bufferline = true,
+				show_tab_indicators = false,
+				indicator = { style = "none" },
+				icon_pinned = "󰐃",
+				minimum_padding = 1,
+				maximum_padding = 2,
+				maximum_length = 20,
+				sort_by = "insert_at_end",
+				offsets = {
+					{
+						filetype = "neo-tree",
+						text = "File Explorer",
+						highlight = "BufferLineBackground",
+						padding = 0,
+						separator = true,
+					},
+				},
+				custom_areas = {
+					right = function()
+						return { { text = " ", guifg = "NONE" } }
+					end,
+				},
+			},
+			highlights = {
+				fill                = { bg = c.bar_bg },
+				background          = { fg = c.inactive_fg, bg = c.inactive_bg },
+				buffer_visible      = { fg = c.inactive_fg, bg = c.inactive_bg },
+				buffer_selected     = { fg = c.active_fg,   bg = c.active_bg, bold = true, italic = false },
+				separator           = { fg = c.bar_bg,      bg = c.inactive_bg },
+				separator_visible   = { fg = c.bar_bg,      bg = c.inactive_bg },
+				separator_selected  = { fg = c.bar_bg,      bg = c.active_bg },
+				close_button        = { fg = c.inactive_fg, bg = c.inactive_bg },
+				close_button_visible= { fg = c.inactive_fg, bg = c.inactive_bg },
+				close_button_selected={ fg = c.active_fg,  bg = c.active_bg },
+				modified            = { fg = c.modified,    bg = c.inactive_bg },
+				modified_visible    = { fg = c.modified,    bg = c.inactive_bg },
+				modified_selected   = { fg = c.modified,    bg = c.active_bg },
+				tab_selected        = { fg = c.active_fg,   bg = c.active_bg, bold = true },
+				tab                 = { fg = c.inactive_fg, bg = c.inactive_bg },
+				tab_close           = { fg = c.inactive_fg, bg = c.bar_bg },
+				offset_separator    = { fg = c.bar_bg,      bg = c.bar_bg },
+			},
+		})
+	end,
+}

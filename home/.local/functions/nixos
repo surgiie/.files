@@ -1,0 +1,94 @@
+nixos() {
+    case "$1" in
+    sync)
+        shift
+        if [[ ! -f "$HOME/nixos-host" ]]; then
+            echo "❌ ERROR: Please write your nixos host name to $HOME/nixos-host" >&2
+            return 1
+        fi
+        local host dotfiles_dir sudo_arg
+        host="$(cat "$HOME/nixos-host")"
+        dotfiles_dir="$HOME/.files"
+        sudo_arg="--use-remote-sudo"
+        nixos-rebuild --help 2>/dev/null | grep -q -- '--sudo' && sudo_arg="--sudo"
+
+        if ! nixos-rebuild switch --flake "path:$dotfiles_dir#$host" "$sudo_arg" "$@"; then
+            echo "NixOS rebuild failed."
+            return 1
+        fi
+
+        local ans
+        read -r -p "Rebuild successful. Do you want to clean up old generations? [y/N] " ans
+        [[ "$ans" == "y" || "$ans" == "Y" ]] && sudo nix-collect-garbage -d
+
+        command -v update-desktop-database &>/dev/null && \
+            update-desktop-database "$HOME/.local/share/applications/"
+        ;;
+    shell)
+        shift
+        local version commit pkg_args=() nix_pkgs=()
+
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+            --version)
+                version="$2"
+                shift 2
+                ;;
+            *)
+                pkg_args+=("$1")
+                shift
+                ;;
+            esac
+        done
+
+        if [[ ${#pkg_args[@]} -eq 0 ]]; then
+            echo "Usage: nixos shell <package> [<package>...] [--version <version>]" >&2
+            return 1
+        fi
+
+        if [[ -n "$version" && ${#pkg_args[@]} -gt 1 ]]; then
+            echo "Error: --version can only be used with a single package" >&2
+            return 1
+        fi
+
+        if [[ -n "$version" ]]; then
+            local pkg="${pkg_args[0]}"
+            commit=$(curl -fsSL \
+                "https://api.github.com/search/commits?q=${pkg}+${version}+repo:NixOS/nixpkgs&per_page=5" \
+                -H "Accept: application/vnd.github.cloak-preview+json" 2>/dev/null |
+                jq -r --arg pkg "$pkg" --arg ver "$version" '
+                    .items[]
+                    | select(.commit.message | test($pkg + ":.*-> " + $ver + "($|[^0-9])"; "i"))
+                    | .sha
+                ' | head -1)
+
+            if [[ -z "$commit" ]]; then
+                echo "Error: no nixpkgs commit found for ${pkg} version ${version}" >&2
+                return 1
+            fi
+        else
+            commit=$(curl -fsSL "https://channels.nixos.org/nixpkgs-unstable/git-revision" 2>/dev/null)
+            if [[ -z "$commit" ]]; then
+                echo "Error: failed to fetch latest nixpkgs-unstable commit" >&2
+                return 1
+            fi
+        fi
+
+        for pkg in "${pkg_args[@]}"; do
+            nix_pkgs+=("github:NixOS/nixpkgs/${commit}#${pkg}")
+        done
+
+        local label="${pkg_args[*]}"
+        echo "=> nix shell with ${label// /, }${version:+ @ ${version}} (commit: ${commit})"
+        IN_NIX_SHELL=1 nix shell "${nix_pkgs[@]}"
+        ;;
+    *)
+        echo "Usage: nixos <subcommand>"
+        echo
+        echo "Subcommands:"
+        echo "  sync   - rebuild nixos config and optionally clean up old generations"
+        echo "  shell  - open a nix shell with one or more packages"
+        return 1
+        ;;
+    esac
+}

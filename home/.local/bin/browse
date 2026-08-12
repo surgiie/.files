@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Shim so xdg-open and browse.desktop can invoke the browse shell function
+# defined in ~/.local/functions/browse without needing an interactive shell session.
+source "$HOME/.local/functions/browse"
+browse "$@"

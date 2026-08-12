@@ -1,0 +1,109 @@
+aws() {
+    local AWS_BIN=/run/current-system/sw/bin/aws
+
+    # ── sso login ─────────────────────────────────────────────────────────────
+    if [[ "$1" == "sso" && "$2" == "login" && $# -eq 2 ]]; then
+        local profile
+        profile=$(grep '^\[profile ' ~/.aws/config | sed 's/^\[profile //;s/\]$//' | fzf --prompt='profile> ')
+        [[ -n "$profile" ]] || return 1
+        printf '\033[2J\033[H'
+        "$AWS_BIN" sso login --profile "$profile" || return 1
+        export AWS_PROFILE="$profile"
+
+    # ── ecr login ─────────────────────────────────────────────────────────────
+    elif [[ "$1" == "ecr" && "$2" == "login" ]]; then
+        local profile registry
+        profile=$(grep '^\[profile ' ~/.aws/config | sed 's/^\[profile //;s/\]$//' | fzf --prompt='profile> ')
+        [[ -n "$profile" ]] || return 1
+        registry="$(
+            "$AWS_BIN" ecr describe-registry --profile "$profile" --query 'registryId' --output text
+        ).dkr.ecr.$(
+            "$AWS_BIN" configure get region --profile "$profile"
+        ).amazonaws.com"
+        "$AWS_BIN" ecr get-login-password --profile "$profile" |
+            docker login --username AWS --password-stdin "$registry"
+
+    # ── route53 lookup ────────────────────────────────────────────────────────
+    elif [[ "$1" == "route53" && "$2" == "lookup" ]]; then
+        shift 2
+        local AWS_PAGER="" domain="" zone hosted_zone_id matched_zone record wildcard wildcard_record
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+            --domain) domain="$2"; shift 2 ;;
+            *) echo "Unknown option: $1"; echo "Usage: aws route53 lookup --domain <domain>"; return 1 ;;
+            esac
+        done
+
+        [[ -n "$domain" ]] || { echo "Usage: aws route53 lookup --domain <domain>"; return 1; }
+        domain="${domain%.}"
+        echo "Checking $domain..."
+
+        zone="$domain"
+        hosted_zone_id=""
+        matched_zone=""
+
+        while :; do
+            hosted_zone_id=$(
+                "$AWS_BIN" route53 list-hosted-zones-by-name \
+                    --dns-name "${zone}." \
+                    --query "HostedZones[?Name=='${zone}.'].Id | [0]" \
+                    --output text 2>/dev/null
+            )
+            if [[ "$hosted_zone_id" != "None" && -n "$hosted_zone_id" ]]; then
+                hosted_zone_id="${hosted_zone_id##*/}"
+                matched_zone="$zone"
+                break
+            fi
+            [[ "$zone" == *.* ]] || break
+            zone="${zone#*.}"
+        done
+
+        if [[ -z "$hosted_zone_id" ]]; then
+            echo "RESULT: MISSING"; echo "REASON: no hosted zone found"; return 1
+        fi
+
+        echo "Hosted zone: $matched_zone"
+        echo "Hosted zone id: $hosted_zone_id"
+
+        if [[ "$matched_zone" == "$domain" ]]; then
+            echo "RESULT: HOSTED ZONE"; return 0
+        fi
+
+        record=$(
+            "$AWS_BIN" route53 list-resource-record-sets \
+                --hosted-zone-id "$hosted_zone_id" \
+                --start-record-name "${domain}." \
+                --max-items 1 \
+                --query 'ResourceRecordSets[0].Name' \
+                --output text 2>/dev/null || true
+        )
+        record="${record%.}"
+
+        if [[ "$record" == "$domain" ]]; then
+            echo "RESULT: EXPLICIT RECORD"; return 0
+        fi
+
+        wildcard="*.${matched_zone}"
+        wildcard_record=$(
+            "$AWS_BIN" route53 list-resource-record-sets \
+                --hosted-zone-id "$hosted_zone_id" \
+                --query 'ResourceRecordSets[].Name' \
+                --output text 2>/dev/null |
+                tr '\t' '\n' | sed 's/^\\052/*/' | grep -Fx "${wildcard}." || true
+        )
+
+        if [[ "$wildcard_record" == "${wildcard}." ]]; then
+            echo "RESULT: NOT EXPLICIT"
+            echo "REASON: resolved by wildcard ${wildcard} (CNAME?)"
+            return 0
+        fi
+
+        echo "RESULT: MISSING"
+        echo "HINT: Hosted Zone found, but no record for this domain. Add an explicit A, AAAA, CNAME, or Alias record?"
+        return 1
+
+    # ── passthrough ───────────────────────────────────────────────────────────
+    else
+        "$AWS_BIN" "$@"
+    fi
+}

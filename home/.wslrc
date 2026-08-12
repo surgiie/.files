@@ -1,0 +1,51 @@
+    cp $HOME/.files/home/.wezterm.common.lua /mnt/c/Users/surgiie/.wezterm.common.lua
+    cp $HOME/.files/home/.wezterm.wsl.lua /mnt/c/Users/surgiie/.wezterm.lua
+
+    mkdir -p "/mnt/c/Users/surgiie/AppData/Local/Microsoft/PowerToys/Keyboard Manager"
+    cp "$HOME/.files/home/.config/powertoys/keyboard-manager/default.json" "/mnt/c/Users/surgiie/AppData/Local/Microsoft/PowerToys/Keyboard Manager/default.json"
+
+    mkdir -p /mnt/c/Users/surgiie/AppData/Local/Mouseless/configs
+    cp "$HOME/.files/home/.config/mouseless/config.yaml" /mnt/c/Users/surgiie/AppData/Local/Mouseless/configs/config.yaml
+
+    mkdir -p /mnt/c/Users/surgiie/AppData/Roaming/wtq
+    cp $HOME/.files/home/.config/wtq/wtq.jsonc /mnt/c/Users/surgiie/AppData/Roaming/wtq/wtq.jsonc
+
+    mkdir -p /mnt/d/sounds/windwaker /mnt/d/sounds/kingdom-hearts
+    cp $HOME/.files/sounds/windwaker/pause.mp3 /mnt/d/sounds/windwaker/pause.mp3
+    cp $HOME/.files/sounds/windwaker/pause-close.mp3 /mnt/d/sounds/windwaker/pause-close.mp3
+    cp $HOME/.files/sounds/kingdom-hearts/pause.mp3 /mnt/d/sounds/kingdom-hearts/pause.mp3
+    cp $HOME/.files/sounds/kingdom-hearts/pause-close.mp3 /mnt/d/sounds/kingdom-hearts/pause-close.mp3
+
+    # v2.2.0-pre2: first release with working Exclusive: "Never" support.
+    # Update this tag once v2.2.0 stable is out.
+    wtq_tag="v2.2.0-pre2"
+
+    if [ ! -f /mnt/d/wtq/wtq.exe ]; then
+        echo "windows-terminal-quake not found, downloading $wtq_tag..."
+        mkdir -p /mnt/d/wtq
+        zip_url=$(curl -sf "https://api.github.com/repos/flyingpie/windows-terminal-quake/releases/tags/$wtq_tag" \
+            | grep -o '"browser_download_url": "[^"]*win-x64_self-contained\.zip"' \
+            | grep -o 'https://[^"]*')
+        if [ -z "$zip_url" ]; then
+            echo "ERROR: could not resolve windows-terminal-quake download URL" >&2
+        else
+            tmp=$(mktemp /tmp/wtq-XXXX.zip)
+            curl -sL -o "$tmp" "$zip_url" \
+                && unzip -o -q "$tmp" -d /mnt/d/wtq \
+                && echo "windows-terminal-quake downloaded to /mnt/d/wtq/"
+            rm -f "$tmp"
+        fi
+    fi
+    cp $HOME/.files/home/.config/wtq/wtq-sounds.ps1 /mnt/d/wtq/wtq-sounds.ps1
+
+    tasklist=/mnt/c/Windows/System32/tasklist.exe
+    powershell=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+
+    # Skip Windows interop calls if the PE binfmt handler isn't registered.
+    if [ ! -e /proc/sys/fs/binfmt_misc/WSLInterop ] && [ ! -e /proc/sys/fs/binfmt_misc/WSLInterop-late ]; then
+        return
+    fi
+
+    if ! "$tasklist" 2>/dev/null | grep -qi "wtq.exe"; then
+        "$powershell" -Command 'Start-Process "D:\wtq\wtq.exe" -Verb RunAs -WindowStyle Hidden' 2>/dev/null
+    fi

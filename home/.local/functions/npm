@@ -1,0 +1,32 @@
+npm() {
+    local _NPM=/run/current-system/sw/bin/npm
+
+    case "$1" in
+    symlink)
+        local package_path="${2:-.}"
+
+        if [[ ! -f "$package_path/package.json" ]]; then
+            echo "Error: package.json not found in $package_path"
+            return 1
+        fi
+
+        local package_name
+        package_name=$(node -p "require('$package_path/package.json').name" 2>/dev/null)
+
+        if [[ -z "$package_name" || "$package_name" == "undefined" ]]; then
+            echo "Error: Invalid or missing package name in package.json"
+            return 1
+        fi
+
+        echo "Linking $package_name at $package_path"
+        cd "$package_path" || return 1
+        "$_NPM" link
+
+        cd - >/dev/null || return 1
+        "$_NPM" link "$package_name"
+        ;;
+    *)
+        "$_NPM" "$@"
+        ;;
+    esac
+}

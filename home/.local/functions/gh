@@ -1,0 +1,59 @@
+gh() {
+    local _GH=/run/current-system/sw/bin/gh
+
+    case "$1" in
+    delete-runs)
+        local branch workflow wf candidates
+
+        branch="${2:-$($_GH branch --show-current 2>/dev/null || git branch --show-current)}"
+
+        echo "Loading workflows for branch: $branch ..."
+
+        candidates="$(
+            "$_GH" workflow list --json name -q '.[].name' |
+                while IFS= read -r wf; do
+                    if "$_GH" run list \
+                        --workflow "$wf" \
+                        --branch "$branch" \
+                        --limit 1 \
+                        --json databaseId \
+                        -q 'length > 0' | grep -q true; then
+                        printf '%s\n' "$wf"
+                    fi
+                done
+        )"
+        printf "\033[1A\033[K"
+        if [[ -z "$candidates" ]]; then
+            echo "No workflows with runs found for branch: $branch"
+            return 1
+        fi
+
+        workflow=$(
+            printf '%s\n' "$candidates" |
+                fzf --prompt="Workflow [$branch]: "
+        )
+
+        [[ -z "$workflow" ]] && return 1
+
+        echo "About to delete runs for workflow '$workflow' on branch '$branch'"
+
+        printf "Continue? [y/N] "
+        read confirm
+        [[ "$confirm" =~ ^[Yy]$ ]] || {
+            echo "Cancelled"
+            return 1
+        }
+
+        "$_GH" run list \
+            --branch "$branch" \
+            --workflow "$workflow" \
+            --limit 1000 \
+            --json databaseId \
+            -q '.[].databaseId' |
+            xargs -r -n1 "$_GH" run delete
+        ;;
+    *)
+        "$_GH" "$@"
+        ;;
+    esac
+}

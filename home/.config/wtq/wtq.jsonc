@@ -1,0 +1,38 @@
+{
+  "$schema": "wtq.schema.json",
+  "ShowUiOnStart": false,
+  "Exclusive": "Never",
+  "HorizontalScreenCoverage": 100,
+  "VerticalScreenCoverage": 100,
+  "HideOnFocusLost": "Never",
+  "EventHooks": [
+    {
+      "EventPattern": "AppToggled(On|Off)",
+      "FileName": "powershell",
+      "ArgumentList": [
+        { "Argument": "-ExecutionPolicy" },
+        { "Argument": "Bypass" },
+        { "Argument": "-File" },
+        { "Argument": "D:/wtq/wtq-sounds.ps1" }
+      ]
+    }
+  ],
+
+  "Apps": [
+    {
+      // Super+T → WezTerm  (mirrors: Super + T in hyprland)
+      "Name": "WezTerm",
+      "Hotkeys": [{ "Modifiers": "Super", "KeyChar": "t" }],
+      "FileName": "wezterm-gui",
+      "AttachMode": "FindOrStart"
+    },
+    {
+      // Super+B → Chrome  (mirrors: Super + B in hyprland)
+      "Name": "Google Chrome",
+      "Hotkeys": [{ "Modifiers": "Super", "KeyChar": "b" }],
+      "FileName": "chrome",
+      "ProcessName": "^chrome$",
+      "AttachMode": "FindOrStart"
+    }
+  ]
+}

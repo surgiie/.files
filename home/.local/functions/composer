@@ -1,0 +1,28 @@
+composer() {
+    local _COMPOSER=/run/current-system/sw/bin/composer
+
+    case "$1" in
+    link)
+        local package_path="${2:-.}"
+
+        if [[ ! -f "$package_path/composer.json" ]]; then
+            echo "Error: composer.json not found in $package_path"
+            return 1
+        fi
+
+        local name
+        name=$(jq -r '.name' "$package_path/composer.json")
+
+        if [[ "$name" == "null" || -z "$name" ]]; then
+            echo "Error: Invalid or missing package name in composer.json"
+            return 1
+        fi
+
+        "$_COMPOSER" config repositories.local '{"type": "path", "url": "'"$package_path"'"}' --file composer.json
+        "$_COMPOSER" require "$name" @dev
+        ;;
+    *)
+        "$_COMPOSER" "$@"
+        ;;
+    esac
+}

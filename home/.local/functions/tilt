@@ -1,0 +1,3 @@
+tilt() {
+    NO_COLOR=1 /run/current-system/sw/bin/tilt "$@"
+}
