@@ -18,7 +18,7 @@ nixos() {
         fi
 
         local ans
-        read -r -p "Rebuild successful. Do you want to clean up old generations? [y/N] " ans
+        print -n "Rebuild successful. Do you want to clean up old generations? [y/N] " && read -r ans
         [[ "$ans" == "y" || "$ans" == "Y" ]] && sudo nix-collect-garbage -d
 
         command -v update-desktop-database &>/dev/null && \

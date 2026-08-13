@@ -142,6 +142,11 @@ return {
 			})
 		end
 
+		-- nvim-treesitter v1 removed configs/parsers APIs telescope depends on;
+		-- disable ts highlighting in the previewer to avoid errors on scroll
+		local preview_utils = require("telescope.previewers.utils")
+		preview_utils.ts_highlighter = function() end
+
 		telescope.load_extension("themes")
 		pcall(require("telescope").load_extension, "fzf")
 		pcall(require("telescope").load_extension, "file_browser")
