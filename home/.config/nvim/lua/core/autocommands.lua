@@ -267,6 +267,15 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 	end,
 })
 
+
+-- ── Hide Neo-tree when Telescope is open ─────────────────────────────────────
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "TelescopePrompt",
+	callback = function()
+		vim.cmd("Neotree close")
+	end,
+})
+
 -- ── Directory Argument Handling ──────────────────────────────────────────────
 vim.api.nvim_create_autocmd("VimEnter", {
 	callback = function()
