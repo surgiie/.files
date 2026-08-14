@@ -138,7 +138,7 @@ alias cat="bat -p"
 alias forgit="git-forgit"
 alias copy="wl-copy"
 kanban() {
-    cd ~/
+    cd ~/.files
     nvim .kanban/board.md
     cd -
 }

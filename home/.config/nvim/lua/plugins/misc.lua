@@ -12,12 +12,9 @@ return {
 		end,
 	},
 	{
-		-- "surgiie/nvim-kanban",
 		"surgiie/nvim-kanban",
 		config = function()
-			require("kanban").setup({
-				keymap = "<leader>kb",
-			})
+			require("kanban").setup()
 		end,
 	},
 	{ "matze/vim-move" },
