@@ -12,6 +12,7 @@ return {
 		end,
 	},
 	{
+		-- "surgiie/nvim-kanban",
 		"surgiie/nvim-kanban",
 		config = function()
 			require("kanban").setup({

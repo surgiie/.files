@@ -74,10 +74,6 @@ source "$HOME/.oh-my-zsh/themes/bullet-train.zsh-theme"
 # -------------------------------------------------------------------------
 # Dependency Checks / Auto-Install
 # -------------------------------------------------------------------------
-if ! command -v kantui &>/dev/null; then
-    wget -qO "$HOME/.local/bin/kantui" https://raw.githubusercontent.com/surgiie/kantui/refs/heads/main/docker && chmod +x "$HOME/.local/bin/kantui"
-fi
-
 if [ ! -d ~/.config/yazi/flavors/monokai-vibrant.yazi ] && command -v ya >/dev/null 2>&1; then
     ya pkg add sanjinso/monokai-vibrant
 fi
@@ -140,8 +136,12 @@ alias k="kubectl"
 alias sudo='sudo -E env "PATH=$PATH"'
 alias cat="bat -p"
 alias forgit="git-forgit"
-alias todo="kantui"
 alias copy="wl-copy"
+kanban() {
+    cd ~/
+    nvim .kanban/board.md
+    cd -
+}
 alias ls="eza --icons=always"
 alias ll="eza --icons=always -la"
 alias fs="yazi"

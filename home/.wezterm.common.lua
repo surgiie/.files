@@ -253,6 +253,7 @@ function M.apply(config, opts)
 	local keymaps = opts.keymaps
 		or {
 			-- ── Kubectl ───────────────────────────────────────────────────────────
+			{ key = "vb", description = "Neovim - Open Kanban Board", action = "kanban" },
 			{ key = "kn", description = "Kubectl — Switch namespace", action = "kubectl namespace" },
 			{ key = "kc", description = "Kubectl — Switch context", action = "kubectl context" },
 			{ key = "gs", description = "Git — Switch Branch", action = "git switch" },
