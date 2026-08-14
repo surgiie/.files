@@ -15,16 +15,21 @@ _zsh_autosuggest_strategy_smart() {
     local current_word="${before_cursor##* }"
     [[ -z "$current_word" ]] && return
 
+    # Strip leading non-alphanumeric characters (e.g. quotes: "exp -> exp)
+    local search_word="${current_word#"${current_word%%[[:alnum:]]*}"}"
+    [[ -z "$search_word" ]] && return
+
     # Search in-memory history for a word that starts with the fragment
     local matched_word
     matched_word=$(fc -ln 1 2>/dev/null \
-        | grep -oP "(?<![^\s])${current_word}[^\s]*" \
+        | grep -oP "(?<![^\s])${search_word}[^\s]*" \
         | sort -u | head -1)
     [[ -z "$matched_word" ]] && return
 
     # Only suggest if the match extends the fragment
-    [[ "$matched_word" == "$current_word" ]] && return
+    [[ "$matched_word" == "$search_word" ]] && return
 
-    # Suggestion: same as buffer up to start of word, then the full matched word
-    suggestion="${before_cursor%$current_word}${matched_word}"
+    # Suggestion: replace only the search portion, preserving any leading punctuation
+    local prefix="${current_word%$search_word}"
+    suggestion="${before_cursor%$current_word}${prefix}${matched_word}"
 }
