@@ -15,7 +15,7 @@ export PATH="$PATH:$HOME/.npm/bin"
 export PATH="$PATH:$HOME/.local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
 
-ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+ZSH_AUTOSUGGEST_STRATEGY=(smart history completion)
 ZSH_AUTOSUGGEST_ACCEPT_WIDGETS=(forward-char end-of-line vi-forward-char vi-end-of-line)
 ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS=(forward-word vi-forward-word vi-forward-word-end vi-forward-blank-word vi-forward-blank-word-end)
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
