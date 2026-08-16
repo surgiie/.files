@@ -143,7 +143,7 @@ keymaps:
       toggle continuous mode: null
       toggle continuous mode until closed: "1"
       toggle free mode: Ctrl + m
-      toggle overlay: Ctrl + space
+      toggle overlay: Alt + space
       toggle overlay lock: null
       undo last key: Backspace
       wheel down: b
