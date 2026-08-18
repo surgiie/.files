@@ -44,8 +44,10 @@ http() {
             for _ in $(seq 1 "$max"); do _http_stress_get "$url" & done
             wait
             local batch_ok batch_err
-            batch_ok=$(grep -c "^ok$"  "$tmpdir/results" 2>/dev/null || echo 0)
-            batch_err=$(grep -c "^err$" "$tmpdir/results" 2>/dev/null || echo 0)
+            batch_ok=$(grep -c "^ok$"  "$tmpdir/results" 2>/dev/null)
+            batch_err=$(grep -c "^err$" "$tmpdir/results" 2>/dev/null)
+            batch_ok=${batch_ok:-0}
+            batch_err=${batch_err:-0}
             total=$(( total + max ))
             ok=$(( ok + batch_ok ))
             err=$(( err + batch_err ))
