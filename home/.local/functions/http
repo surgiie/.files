@@ -17,9 +17,13 @@ http() {
 
         local BOLD="\e[1m" RESET="\e[0m" GREEN="\e[32m" RED="\e[31m" DIM="\e[2m"
 
+        _http_stress_header() {
+            printf " %-12s │ %-6s │ %s\n" "Time" "Status" "Response Time"
+            printf "─%.0s" {1..14}; printf "┼"; printf "─%.0s" {1..8}; printf "┼"; printf "─%.0s" {1..14}; printf "\n"
+        }
+
         printf "\n${BOLD}Started:${RESET} $(date)\n\n"
-        printf " %-12s │ %-6s │ %s\n" "Time" "Status" "Response Time"
-        printf "─%.0s" {1..14}; printf "┼"; printf "─%.0s" {1..8}; printf "┼"; printf "─%.0s" {1..14}; printf "\n"
+        _http_stress_header
 
         local START total=0 ok=0 err=0 tmpdir
         START=$(date +%s)
@@ -55,6 +59,7 @@ http() {
             elapsed_fmt=$(printf "%02d:%02d" $(( elapsed / 60 )) $(( elapsed % 60 )))
             printf "${DIM} ── %s elapsed ── %d sent, %d ok, %d err ──${RESET}\n" "$elapsed_fmt" "$total" "$ok" "$err"
             sleep 1
+            _http_stress_header
         done
         ;;
     *)

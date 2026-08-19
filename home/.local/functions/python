@@ -6,7 +6,11 @@ python() {
         "$_PYTHON" -m venv .venv --copies
         ;;
     *)
-        "$_PYTHON" "$@"
+        if [[ -n "$VIRTUAL_ENV" && -x "$VIRTUAL_ENV/bin/python" ]]; then
+            "$VIRTUAL_ENV/bin/python" "$@"
+        else
+            "$_PYTHON" "$@"
+        fi
         ;;
     esac
 }
