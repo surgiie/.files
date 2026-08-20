@@ -17,7 +17,7 @@ return {
 		end
 
 		if is_executable("python3") or is_executable("python") then
-			formatters_by_ft.python = { "ruff_format" }
+			formatters_by_ft.python = { "ruff_organize_imports", "ruff_format" }
 		end
 
 		if is_executable("php") then

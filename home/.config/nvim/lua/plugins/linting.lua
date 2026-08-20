@@ -9,8 +9,11 @@ return {
 		lint.linters_by_ft = {
 			javascript = { "eslint_d" },
 			typescript = { "eslint_d" },
-			python = { "pylint" },
 		}
+
+		if is_executable("pylint") then
+			lint.linters_by_ft.python = { "pylint" }
+		end
 
 
 		eslint.args = {
