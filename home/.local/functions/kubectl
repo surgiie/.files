@@ -31,12 +31,12 @@ kubectl() {
                 [[ "$arg" == "--decode" ]] && decode=true || filtered_args+=("$arg")
             done
             if [[ "$decode" == true ]]; then
-                local secret_name="${filtered_args[0]:-}"
+                local secret_name="${filtered_args[1]:-}"
                 if [[ -z "$secret_name" ]]; then
                     echo "Usage: kubectl get secret <name> [kubectl flags...] --decode" >&2
                     return 1
                 fi
-                local extra_flags=("${filtered_args[@]:1}")
+                local extra_flags=("${filtered_args[@]:2}")
                 "$_KUBECTL" get secret "$secret_name" "${extra_flags[@]}" -o json |
                     jq -r '.data | to_entries[] | .key + ": " + (.value | @base64d)'
             else

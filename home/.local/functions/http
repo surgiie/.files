@@ -3,17 +3,17 @@ http() {
     stress)
         shift
         set +m
-        local url="" max=""
+        local url="" max="" curl_args=()
 
         while [[ $# -gt 0 ]]; do
             case "$1" in
             --url)  url="$2";  shift 2 ;;
             --rate) max="$2";  shift 2 ;;
-            *) echo "Unknown option: $1"; echo "Usage: http stress --url <url> --rate <n>"; return 1 ;;
+            *) curl_args+=("$1"); shift ;;
             esac
         done
 
-        [[ -z "$url" || -z "$max" ]] && { echo "Usage: http stress --url <url> --rate <n>"; return 1; }
+        [[ -z "$url" || -z "$max" ]] && { echo "Usage: http stress --url <url> --rate <n> [curl args...]"; return 1; }
 
         local BOLD="\e[1m" RESET="\e[0m" GREEN="\e[32m" RED="\e[31m" DIM="\e[2m"
 
@@ -30,8 +30,10 @@ http() {
         tmpdir=$(mktemp -d)
 
         _http_stress_get() {
+            local url="$1"
+            shift
             local out code time color
-            out=$(curl -sS -o /dev/null -w "%{http_code} %{time_total}" "$1" 2>/dev/null)
+            out=$(curl -sS -o /dev/null -w "%{http_code} %{time_total}" "$@" "$url" 2>/dev/null)
             code=$(awk '{print $1}' <<< "$out")
             time=$(awk '{printf "%.3fs", $2}' <<< "$out")
             if [[ "$code" =~ ^2 ]]; then
@@ -45,7 +47,7 @@ http() {
         while true; do
             local elapsed=$(( $(date +%s) - START ))
             rm -f "$tmpdir/results"
-            for _ in $(seq 1 "$max"); do _http_stress_get "$url" & done
+            for _ in $(seq 1 "$max"); do _http_stress_get "$url" "${curl_args[@]}" & done
             wait
             local batch_ok batch_err
             batch_ok=$(grep -c "^ok$"  "$tmpdir/results" 2>/dev/null)

@@ -15,7 +15,44 @@ export PATH="$PATH:$HOME/.npm/bin"
 export PATH="$PATH:$HOME/.local/bin/nvim/bin"
 export ZSH=/home/$USER/.oh-my-zsh
 
-ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+# Custom strategy: if the history strategy found nothing, complete just the
+# word currently being typed using any history line that contains it as a
+# substring anywhere (not just a prefix match) — not a full-line suggestion.
+#
+# The plugin discards any $suggestion that isn't a prefix-extension of the
+# full buffer ($1), so we can't just hand back the raw matched history line
+# (it usually doesn't start with everything already typed). Instead we
+# rebuild a suggestion as: everything typed so far, up to the start of the
+# current word, followed by the rest of *that one word* from the matched
+# history line (stopping at the next space). That reconstruction is
+# guaranteed to start with $1, satisfying the plugin's prefix check, while
+# staying scoped to a single word instead of trailing the whole line.
+_zsh_autosuggest_strategy_word_anywhere() {
+    emulate -L zsh
+    setopt EXTENDED_GLOB
+
+    # Everything before the last word, and the last (possibly partial) word itself.
+    local prefix="${1%${1##* }}"
+    local word="${1##* }"
+    [[ -z "$word" ]] && return
+
+    # Escape glob-special characters so the word is matched literally.
+    local needle="${word//(#m)[\\*?[\]<>()|^~#]/\\$MATCH}"
+
+    local h tail rest
+    for h in "${history[@]}"; do
+        if [[ "$h" == *"$needle"* ]]; then
+            # Rest of the line starting at the matched word, then cut at
+            # the next space so we only complete the current word.
+            tail="${h#*$needle}"
+            rest="${tail%% *}"
+            typeset -g suggestion="${prefix}${word}${rest}"
+            return
+        fi
+    done
+}
+
+ZSH_AUTOSUGGEST_STRATEGY=(history word_anywhere)
 ZSH_AUTOSUGGEST_ACCEPT_WIDGETS=(forward-char end-of-line vi-forward-char vi-end-of-line)
 ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS=(forward-word vi-forward-word vi-forward-word-end vi-forward-blank-word vi-forward-blank-word-end)
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
