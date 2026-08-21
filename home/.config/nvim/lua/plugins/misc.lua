@@ -39,6 +39,8 @@ return {
 				"dashboard",
 				"neo-tree",
 			}
+			vim.g.strip_whitespace_on_save = 1
+			vim.g.strip_whitespace_confirm = 0
 		end,
 	},
 	-- Neovim API completions and type annotations for lua files
